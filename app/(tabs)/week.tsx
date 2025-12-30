@@ -31,7 +31,55 @@ function getWeekDays(weekStartDate: string): string[] {
   return days;
 }
 
+// Get month days for calendar view
+function getMonthDays(year: number, month: number): (string | null)[][] {
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+  const daysInMonth = lastDay.getDate();
+  const startWeekday = firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1; // Monday = 0
+  
+  const weeks: (string | null)[][] = [];
+  let currentWeek: (string | null)[] = [];
+  
+  // Fill empty days before first day
+  for (let i = 0; i < startWeekday; i++) {
+    currentWeek.push(null);
+  }
+  
+  // Fill days
+  for (let day = 1; day <= daysInMonth; day++) {
+    const date = new Date(year, month, day);
+    currentWeek.push(date.toISOString().split("T")[0]);
+    
+    if (currentWeek.length === 7) {
+      weeks.push(currentWeek);
+      currentWeek = [];
+    }
+  }
+  
+  // Fill remaining days
+  if (currentWeek.length > 0) {
+    while (currentWeek.length < 7) {
+      currentWeek.push(null);
+    }
+    weeks.push(currentWeek);
+  }
+  
+  return weeks;
+}
+
+// Get week start date from any date
+function getWeekStartFromDate(date: Date): string {
+  const d = new Date(date);
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+  d.setDate(diff);
+  return d.toISOString().split("T")[0];
+}
+
 const WEEKDAY_NAMES = ["一", "二", "三", "四", "五", "六", "日"];
+
+type ViewMode = "week" | "month";
 
 export default function WeekScreen() {
   const colors = useColors();
@@ -52,20 +100,51 @@ export default function WeekScreen() {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [showReflection, setShowReflection] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>("week");
+  const [currentWeekOffset, setCurrentWeekOffset] = useState(0); // 0 = this week, -1 = last week, etc.
+  const [currentMonthOffset, setCurrentMonthOffset] = useState(0); // 0 = this month
   const [reflectionForm, setReflectionForm] = useState({
     top3Achievements: ["", "", ""],
     gratitude3: ["", "", ""],
     distractions: [""],
   });
 
-  const weekStartDate = getWeekStartDate();
-  const weekDays = useMemo(() => getWeekDays(weekStartDate), [weekStartDate]);
   const today = getToday();
+  const currentWeekStart = getWeekStartDate();
+  
+  // Calculate displayed week based on offset
+  const displayedWeekStart = useMemo(() => {
+    const start = new Date(currentWeekStart);
+    start.setDate(start.getDate() + currentWeekOffset * 7);
+    return start.toISOString().split("T")[0];
+  }, [currentWeekStart, currentWeekOffset]);
+  
+  const weekDays = useMemo(() => getWeekDays(displayedWeekStart), [displayedWeekStart]);
+  
+  // Calculate displayed month based on offset
+  const displayedMonth = useMemo(() => {
+    const now = new Date();
+    const month = new Date(now.getFullYear(), now.getMonth() + currentMonthOffset, 1);
+    return {
+      year: month.getFullYear(),
+      month: month.getMonth(),
+      name: month.toLocaleDateString("zh-CN", { year: "numeric", month: "long" }),
+    };
+  }, [currentMonthOffset]);
+  
+  const monthWeeks = useMemo(
+    () => getMonthDays(displayedMonth.year, displayedMonth.month),
+    [displayedMonth]
+  );
 
-  const weeklyGoals = useMemo(() => getCurrentWeekGoals(), [state.weeklyGoals]);
+  const weeklyGoals = useMemo(() => {
+    // Get goals for the displayed week
+    return state.weeklyGoals.filter((g) => g.weekStartDate === displayedWeekStart);
+  }, [state.weeklyGoals, displayedWeekStart]);
+  
   const weekSessions = useMemo(
-    () => getWeekSessions(weekStartDate),
-    [state.sessions, weekStartDate]
+    () => getWeekSessions(displayedWeekStart),
+    [state.sessions, displayedWeekStart]
   );
 
   // Calculate week stats
@@ -102,7 +181,7 @@ export default function WeekScreen() {
     addWeeklyGoal({
       title: newGoalTitle.trim(),
       isCompleted: false,
-      weekStartDate,
+      weekStartDate: displayedWeekStart,
     });
     setNewGoalTitle("");
   };
@@ -123,7 +202,7 @@ export default function WeekScreen() {
 
   const handleSaveReflection = () => {
     saveWeeklyReflection({
-      weekStartDate,
+      weekStartDate: displayedWeekStart,
       focusMinutesAuto: weekStats.focusMinutes,
       top3Achievements: reflectionForm.top3Achievements.filter((s) => s.trim()),
       gratitude3: reflectionForm.gratitude3.filter((s) => s.trim()),
@@ -149,7 +228,7 @@ export default function WeekScreen() {
 🏆 本周重要完成事项:
 ${top3Tasks.length > 0 ? top3Tasks.map((t, i) => `${i + 1}. ${t.title}`).join("\n") : "暂无"}
 
-📅 ${weekStartDate} ~ ${weekDays[6]}`;
+📅 ${displayedWeekStart} ~ ${weekDays[6]}`;
   };
 
   const handleCopySummary = async () => {
@@ -161,6 +240,57 @@ ${top3Tasks.length > 0 ? top3Tasks.map((t, i) => `${i + 1}. ${t.title}`).join("\
     setShowSummary(false);
   };
 
+  const handlePrevWeek = () => {
+    if (Platform.OS !== "web") {
+      Haptics.selectionAsync();
+    }
+    setCurrentWeekOffset((prev) => prev - 1);
+    setSelectedDate(null);
+  };
+
+  const handleNextWeek = () => {
+    if (Platform.OS !== "web") {
+      Haptics.selectionAsync();
+    }
+    setCurrentWeekOffset((prev) => prev + 1);
+    setSelectedDate(null);
+  };
+
+  const handlePrevMonth = () => {
+    if (Platform.OS !== "web") {
+      Haptics.selectionAsync();
+    }
+    setCurrentMonthOffset((prev) => prev - 1);
+    setSelectedDate(null);
+  };
+
+  const handleNextMonth = () => {
+    if (Platform.OS !== "web") {
+      Haptics.selectionAsync();
+    }
+    setCurrentMonthOffset((prev) => prev + 1);
+    setSelectedDate(null);
+  };
+
+  const handleGoToToday = () => {
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    setCurrentWeekOffset(0);
+    setCurrentMonthOffset(0);
+    setSelectedDate(null);
+  };
+
+  const toggleViewMode = () => {
+    if (Platform.OS !== "web") {
+      Haptics.selectionAsync();
+    }
+    setViewMode((prev) => (prev === "week" ? "month" : "week"));
+    setSelectedDate(null);
+  };
+
+  const isCurrentPeriod = viewMode === "week" ? currentWeekOffset === 0 : currentMonthOffset === 0;
+
   if (state.isLoading) {
     return (
       <ScreenContainer className="flex-1 items-center justify-center">
@@ -169,6 +299,47 @@ ${top3Tasks.length > 0 ? top3Tasks.map((t, i) => `${i + 1}. ${t.title}`).join("\
       </ScreenContainer>
     );
   }
+
+  const renderDayCell = (date: string | null, isMonthView: boolean = false) => {
+    if (!date) {
+      return <View style={[styles.dayCell, isMonthView && styles.monthDayCell]} />;
+    }
+
+    const stats = getDayStats(date);
+    const isToday = date === today;
+    const isSelected = date === selectedDate;
+    const dayNum = new Date(date).getDate();
+
+    return (
+      <Pressable
+        onPress={() => setSelectedDate(isSelected ? null : date)}
+        style={({ pressed }) => [
+          styles.dayCell,
+          isMonthView && styles.monthDayCell,
+          isToday && { borderColor: colors.primary, borderWidth: 2 },
+          isSelected && { backgroundColor: colors.primary },
+          pressed && { opacity: 0.7 },
+        ]}
+      >
+        <Text
+          className={`text-base font-medium ${
+            isSelected ? "text-white" : "text-foreground"
+          }`}
+          style={isMonthView && { fontSize: 14 }}
+        >
+          {dayNum}
+        </Text>
+        {stats.taskCount > 0 && (
+          <View
+            style={[
+              styles.dayDot,
+              { backgroundColor: isSelected ? "#fff" : colors.primary },
+            ]}
+          />
+        )}
+      </Pressable>
+    );
+  };
 
   return (
     <ScreenContainer className="flex-1">
@@ -179,132 +350,181 @@ ${top3Tasks.length > 0 ? top3Tasks.map((t, i) => `${i + 1}. ${t.title}`).join("\
       >
         {/* Header */}
         <View className="pt-4 pb-6">
-          <Text className="text-3xl font-bold text-foreground">本周</Text>
+          <View className="flex-row items-center justify-between">
+            <Text className="text-3xl font-bold text-foreground">
+              {viewMode === "week" ? "本周" : "本月"}
+            </Text>
+            <View className="flex-row items-center">
+              {!isCurrentPeriod && (
+                <Pressable
+                  onPress={handleGoToToday}
+                  style={({ pressed }) => [
+                    styles.todayButton,
+                    { backgroundColor: colors.primary },
+                    pressed && { opacity: 0.8 },
+                  ]}
+                >
+                  <Text className="text-white text-sm font-medium">今天</Text>
+                </Pressable>
+              )}
+              <Pressable
+                onPress={toggleViewMode}
+                style={({ pressed }) => [
+                  styles.viewModeButton,
+                  { backgroundColor: colors.surface },
+                  pressed && { opacity: 0.8 },
+                ]}
+              >
+                <Text className="text-foreground text-sm font-medium">
+                  {viewMode === "week" ? "月视图" : "周视图"}
+                </Text>
+              </Pressable>
+            </View>
+          </View>
           <Text className="text-muted mt-1">
-            {weekStartDate} ~ {weekDays[6]}
+            {viewMode === "week"
+              ? `${displayedWeekStart} ~ ${weekDays[6]}`
+              : displayedMonth.name}
           </Text>
         </View>
 
-        {/* Weekly Goals */}
+        {/* Weekly Goals - Only show in week view */}
+        {viewMode === "week" && (
+          <View className="mb-6">
+            <Text className="text-lg font-semibold text-foreground mb-3">
+              🎯 本周核心目标
+            </Text>
+            {weeklyGoals.map((goal) => (
+              <View
+                key={goal.id}
+                className="flex-row items-center bg-surface rounded-xl px-4 py-3 mb-2"
+              >
+                <Pressable
+                  onPress={() => handleToggleGoal(goal.id)}
+                  style={({ pressed }) => [
+                    styles.checkbox,
+                    { borderColor: colors.primary },
+                    goal.isCompleted && { backgroundColor: colors.primary },
+                    pressed && { opacity: 0.7 },
+                  ]}
+                >
+                  {goal.isCompleted && (
+                    <IconSymbol name="checkmark" size={16} color="#fff" />
+                  )}
+                </Pressable>
+                <Text
+                  className={`flex-1 ml-3 text-base ${
+                    goal.isCompleted ? "text-muted line-through" : "text-foreground"
+                  }`}
+                >
+                  {goal.title}
+                </Text>
+                <Pressable
+                  onPress={() => handleDeleteGoal(goal.id)}
+                  style={({ pressed }) => [pressed && { opacity: 0.5 }]}
+                >
+                  <IconSymbol name="trash.fill" size={20} color={colors.error} />
+                </Pressable>
+              </View>
+            ))}
+
+            {weeklyGoals.length < 10 && (
+              <View className="flex-row items-center mt-2">
+                <TextInput
+                  className="flex-1 bg-surface rounded-xl px-4 py-3 text-foreground"
+                  placeholder="添加本周目标..."
+                  placeholderTextColor={colors.muted}
+                  value={newGoalTitle}
+                  onChangeText={setNewGoalTitle}
+                  returnKeyType="done"
+                  onSubmitEditing={handleAddGoal}
+                />
+                <Pressable
+                  onPress={handleAddGoal}
+                  style={({ pressed }) => [
+                    styles.addButton,
+                    { backgroundColor: colors.primary },
+                    pressed && { opacity: 0.8, transform: [{ scale: 0.97 }] },
+                  ]}
+                >
+                  <IconSymbol name="plus" size={24} color="#fff" />
+                </Pressable>
+              </View>
+            )}
+
+            {weeklyGoals.length === 0 && (
+              <View className="items-center py-4 bg-surface/50 rounded-xl">
+                <Text className="text-muted">暂无本周目标</Text>
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* Calendar */}
         <View className="mb-6">
-          <Text className="text-lg font-semibold text-foreground mb-3">
-            🎯 本周核心目标
-          </Text>
-          {weeklyGoals.map((goal) => (
-            <View
-              key={goal.id}
-              className="flex-row items-center bg-surface rounded-xl px-4 py-3 mb-2"
-            >
+          <View className="flex-row items-center justify-between mb-3">
+            <Text className="text-lg font-semibold text-foreground">
+              📅 {viewMode === "week" ? "本周日历" : "月历"}
+            </Text>
+            <View className="flex-row items-center">
               <Pressable
-                onPress={() => handleToggleGoal(goal.id)}
+                onPress={viewMode === "week" ? handlePrevWeek : handlePrevMonth}
                 style={({ pressed }) => [
-                  styles.checkbox,
-                  { borderColor: colors.primary },
-                  goal.isCompleted && { backgroundColor: colors.primary },
+                  styles.navButton,
+                  { backgroundColor: colors.surface },
                   pressed && { opacity: 0.7 },
                 ]}
               >
-                {goal.isCompleted && (
-                  <IconSymbol name="checkmark" size={16} color="#fff" />
-                )}
+                <IconSymbol name="chevron.left" size={20} color={colors.foreground} />
               </Pressable>
-              <Text
-                className={`flex-1 ml-3 text-base ${
-                  goal.isCompleted ? "text-muted line-through" : "text-foreground"
-                }`}
-              >
-                {goal.title}
-              </Text>
               <Pressable
-                onPress={() => handleDeleteGoal(goal.id)}
-                style={({ pressed }) => [pressed && { opacity: 0.5 }]}
-              >
-                <IconSymbol name="trash.fill" size={20} color={colors.error} />
-              </Pressable>
-            </View>
-          ))}
-
-          {weeklyGoals.length < 10 && (
-            <View className="flex-row items-center mt-2">
-              <TextInput
-                className="flex-1 bg-surface rounded-xl px-4 py-3 text-foreground"
-                placeholder="添加本周目标..."
-                placeholderTextColor={colors.muted}
-                value={newGoalTitle}
-                onChangeText={setNewGoalTitle}
-                returnKeyType="done"
-                onSubmitEditing={handleAddGoal}
-              />
-              <Pressable
-                onPress={handleAddGoal}
+                onPress={viewMode === "week" ? handleNextWeek : handleNextMonth}
                 style={({ pressed }) => [
-                  styles.addButton,
-                  { backgroundColor: colors.primary },
-                  pressed && { opacity: 0.8, transform: [{ scale: 0.97 }] },
+                  styles.navButton,
+                  { backgroundColor: colors.surface, marginLeft: 8 },
+                  pressed && { opacity: 0.7 },
                 ]}
               >
-                <IconSymbol name="plus" size={24} color="#fff" />
+                <IconSymbol name="chevron.right" size={20} color={colors.foreground} />
               </Pressable>
             </View>
-          )}
+          </View>
 
-          {weeklyGoals.length === 0 && (
-            <View className="items-center py-4 bg-surface/50 rounded-xl">
-              <Text className="text-muted">暂无本周目标</Text>
-            </View>
-          )}
-        </View>
-
-        {/* Week Calendar */}
-        <View className="mb-6">
-          <Text className="text-lg font-semibold text-foreground mb-3">
-            📅 本周日历
-          </Text>
           <View className="bg-surface rounded-2xl p-4">
+            {/* Weekday headers */}
             <View className="flex-row justify-between mb-2">
-              {WEEKDAY_NAMES.map((name, index) => (
+              {WEEKDAY_NAMES.map((name) => (
                 <View key={name} className="flex-1 items-center">
                   <Text className="text-muted text-sm">{name}</Text>
                 </View>
               ))}
             </View>
-            <View className="flex-row justify-between">
-              {weekDays.map((date, index) => {
-                const stats = getDayStats(date);
-                const isToday = date === today;
-                const isSelected = date === selectedDate;
-                const dayNum = new Date(date).getDate();
 
-                return (
-                  <Pressable
-                    key={date}
-                    onPress={() => setSelectedDate(isSelected ? null : date)}
-                    style={({ pressed }) => [
-                      styles.dayCell,
-                      isToday && { borderColor: colors.primary, borderWidth: 2 },
-                      isSelected && { backgroundColor: colors.primary },
-                      pressed && { opacity: 0.7 },
-                    ]}
-                  >
-                    <Text
-                      className={`text-base font-medium ${
-                        isSelected ? "text-white" : "text-foreground"
-                      }`}
-                    >
-                      {dayNum}
-                    </Text>
-                    {stats.taskCount > 0 && (
-                      <View
-                        style={[
-                          styles.dayDot,
-                          { backgroundColor: isSelected ? "#fff" : colors.primary },
-                        ]}
-                      />
-                    )}
-                  </Pressable>
-                );
-              })}
-            </View>
+            {/* Week view */}
+            {viewMode === "week" && (
+              <View className="flex-row justify-between">
+                {weekDays.map((date) => (
+                  <View key={date} className="flex-1">
+                    {renderDayCell(date)}
+                  </View>
+                ))}
+              </View>
+            )}
+
+            {/* Month view */}
+            {viewMode === "month" && (
+              <View>
+                {monthWeeks.map((week, weekIndex) => (
+                  <View key={weekIndex} className="flex-row justify-between">
+                    {week.map((date, dayIndex) => (
+                      <View key={dayIndex} className="flex-1">
+                        {renderDayCell(date, true)}
+                      </View>
+                    ))}
+                  </View>
+                ))}
+              </View>
+            )}
           </View>
 
           {/* Selected Day Details */}
@@ -372,37 +592,41 @@ ${top3Tasks.length > 0 ? top3Tasks.map((t, i) => `${i + 1}. ${t.title}`).join("\
           )}
         </View>
 
-        {/* Generate Summary */}
-        <Pressable
-          onPress={() => setShowSummary(true)}
-          style={({ pressed }) => [
-            styles.actionButton,
-            { backgroundColor: colors.primary },
-            pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
-          ]}
-        >
-          <IconSymbol name="doc.on.doc" size={20} color="#fff" />
-          <Text className="text-white font-semibold ml-2">生成本周成果</Text>
-        </Pressable>
+        {/* Generate Summary - Only show in week view */}
+        {viewMode === "week" && (
+          <>
+            <Pressable
+              onPress={() => setShowSummary(true)}
+              style={({ pressed }) => [
+                styles.actionButton,
+                { backgroundColor: colors.primary },
+                pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
+              ]}
+            >
+              <IconSymbol name="doc.on.doc" size={20} color="#fff" />
+              <Text className="text-white font-semibold ml-2">生成本周成果</Text>
+            </Pressable>
 
-        {/* Weekly Reflection */}
-        <Pressable
-          onPress={() => setShowReflection(true)}
-          style={({ pressed }) => [
-            styles.actionButton,
-            { backgroundColor: colors.surface, marginTop: 12 },
-            pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
-          ]}
-        >
-          <IconSymbol name="pencil" size={20} color={colors.foreground} />
-          <Text className="text-foreground font-semibold ml-2">本周反思</Text>
-          <IconSymbol
-            name="chevron.right"
-            size={20}
-            color={colors.muted}
-            style={{ marginLeft: "auto" }}
-          />
-        </Pressable>
+            {/* Weekly Reflection */}
+            <Pressable
+              onPress={() => setShowReflection(true)}
+              style={({ pressed }) => [
+                styles.actionButton,
+                { backgroundColor: colors.surface, marginTop: 12 },
+                pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
+              ]}
+            >
+              <IconSymbol name="pencil" size={20} color={colors.foreground} />
+              <Text className="text-foreground font-semibold ml-2">本周反思</Text>
+              <IconSymbol
+                name="chevron.right"
+                size={20}
+                color={colors.muted}
+                style={{ marginLeft: "auto" }}
+              />
+            </Pressable>
+          </>
+        )}
       </ScrollView>
 
       {/* Summary Modal */}
@@ -465,108 +689,87 @@ ${top3Tasks.length > 0 ? top3Tasks.map((t, i) => `${i + 1}. ${t.title}`).join("\
             ]}
           >
             <ScrollView showsVerticalScrollIndicator={false}>
-              <Text className="text-xl font-bold text-foreground mb-2">
+              <Text className="text-xl font-bold text-foreground mb-4">
                 📝 本周反思
               </Text>
-              <Text className="text-muted mb-4">
-                本周专注时间: {weekStats.focusMinutes} 分钟
-              </Text>
 
-              <Text className="text-foreground font-medium mb-2">
-                本周完成的最重要三件事
+              {/* Top 3 Achievements */}
+              <Text className="text-base font-semibold text-foreground mb-2">
+                🏆 本周三大成就
               </Text>
               {reflectionForm.top3Achievements.map((item, index) => (
                 <TextInput
-                  key={`top3-${index}`}
+                  key={`achievement-${index}`}
                   className="bg-surface rounded-xl px-4 py-3 text-foreground mb-2"
-                  placeholder={`第 ${index + 1} 件事...`}
+                  placeholder={`成就 ${index + 1}`}
                   placeholderTextColor={colors.muted}
                   value={item}
                   onChangeText={(text) => {
-                    const newArr = [...reflectionForm.top3Achievements];
-                    newArr[index] = text;
-                    setReflectionForm({ ...reflectionForm, top3Achievements: newArr });
+                    const newAchievements = [...reflectionForm.top3Achievements];
+                    newAchievements[index] = text;
+                    setReflectionForm({ ...reflectionForm, top3Achievements: newAchievements });
                   }}
                 />
               ))}
 
-              <Text className="text-foreground font-medium mb-2 mt-4">
-                本周感恩的三件事
+              {/* Gratitude */}
+              <Text className="text-base font-semibold text-foreground mb-2 mt-4">
+                🙏 感恩三件事
               </Text>
               {reflectionForm.gratitude3.map((item, index) => (
                 <TextInput
                   key={`gratitude-${index}`}
                   className="bg-surface rounded-xl px-4 py-3 text-foreground mb-2"
-                  placeholder={`感恩 ${index + 1}...`}
+                  placeholder={`感恩 ${index + 1}`}
                   placeholderTextColor={colors.muted}
                   value={item}
                   onChangeText={(text) => {
-                    const newArr = [...reflectionForm.gratitude3];
-                    newArr[index] = text;
-                    setReflectionForm({ ...reflectionForm, gratitude3: newArr });
+                    const newGratitude = [...reflectionForm.gratitude3];
+                    newGratitude[index] = text;
+                    setReflectionForm({ ...reflectionForm, gratitude3: newGratitude });
                   }}
                 />
               ))}
 
-              <Text className="text-foreground font-medium mb-2 mt-4">
-                本周干扰因素
+              {/* Distractions */}
+              <Text className="text-base font-semibold text-foreground mb-2 mt-4">
+                ⚠️ 主要干扰因素
               </Text>
-              {reflectionForm.distractions.map((item, index) => (
-                <View key={`distraction-${index}`} className="flex-row items-center mb-2">
-                  <TextInput
-                    className="flex-1 bg-surface rounded-xl px-4 py-3 text-foreground"
-                    placeholder="干扰因素..."
-                    placeholderTextColor={colors.muted}
-                    value={item}
-                    onChangeText={(text) => {
-                      const newArr = [...reflectionForm.distractions];
-                      newArr[index] = text;
-                      setReflectionForm({ ...reflectionForm, distractions: newArr });
-                    }}
-                  />
-                  {index === reflectionForm.distractions.length - 1 && (
-                    <Pressable
-                      onPress={() =>
-                        setReflectionForm({
-                          ...reflectionForm,
-                          distractions: [...reflectionForm.distractions, ""],
-                        })
-                      }
-                      style={({ pressed }) => [
-                        styles.smallAddButton,
-                        { backgroundColor: colors.surface },
-                        pressed && { opacity: 0.7 },
-                      ]}
-                    >
-                      <IconSymbol name="plus" size={20} color={colors.primary} />
-                    </Pressable>
-                  )}
-                </View>
-              ))}
-            </ScrollView>
+              <TextInput
+                className="bg-surface rounded-xl px-4 py-3 text-foreground mb-4"
+                placeholder="什么事情分散了你的注意力？"
+                placeholderTextColor={colors.muted}
+                value={reflectionForm.distractions[0]}
+                onChangeText={(text) => {
+                  setReflectionForm({ ...reflectionForm, distractions: [text] });
+                }}
+                multiline
+              />
 
-            <View className="flex-row gap-3 mt-4">
-              <Pressable
-                onPress={() => setShowReflection(false)}
-                style={({ pressed }) => [
-                  styles.modalButton,
-                  { backgroundColor: colors.surface },
-                  pressed && { opacity: 0.8 },
-                ]}
-              >
-                <Text className="text-foreground font-medium">取消</Text>
-              </Pressable>
-              <Pressable
-                onPress={handleSaveReflection}
-                style={({ pressed }) => [
-                  styles.modalButton,
-                  { backgroundColor: colors.primary, flex: 1 },
-                  pressed && { opacity: 0.8 },
-                ]}
-              >
-                <Text className="text-white font-semibold">保存</Text>
-              </Pressable>
-            </View>
+              {/* Actions */}
+              <View className="flex-row gap-3 mt-2">
+                <Pressable
+                  onPress={() => setShowReflection(false)}
+                  style={({ pressed }) => [
+                    styles.modalButton,
+                    { backgroundColor: colors.surface },
+                    pressed && { opacity: 0.8 },
+                  ]}
+                >
+                  <Text className="text-foreground font-medium">取消</Text>
+                </Pressable>
+                <Pressable
+                  onPress={handleSaveReflection}
+                  style={({ pressed }) => [
+                    styles.modalButton,
+                    { backgroundColor: colors.primary, flex: 1 },
+                    pressed && { opacity: 0.8 },
+                  ]}
+                >
+                  <Text className="text-white font-semibold">保存</Text>
+                </Pressable>
+              </View>
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -591,14 +794,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginLeft: 8,
   },
-  smallAddButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-    marginLeft: 8,
-  },
   dayCell: {
     flex: 1,
     aspectRatio: 1,
@@ -606,6 +801,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderRadius: 8,
     marginHorizontal: 2,
+  },
+  monthDayCell: {
+    aspectRatio: 1,
+    marginVertical: 2,
   },
   dayDot: {
     width: 6,
@@ -619,6 +818,24 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingVertical: 14,
     borderRadius: 12,
+  },
+  navButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  todayButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    marginRight: 8,
+  },
+  viewModeButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
   },
   modalOverlay: {
     flex: 1,
