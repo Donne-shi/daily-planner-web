@@ -7,6 +7,7 @@ import {
   Modal,
   Platform,
   Dimensions,
+  ScrollView,
 } from "react-native";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
@@ -14,13 +15,12 @@ import { useKeepAwake } from "expo-keep-awake";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
+  useAnimatedProps,
   withTiming,
   Easing,
+  interpolate,
 } from "react-native-reanimated";
-import {
-  Gesture,
-  GestureDetector,
-} from "react-native-gesture-handler";
+import Svg, { Circle } from "react-native-svg";
 
 import { ScreenContainer } from "@/components/screen-container";
 import { IconSymbol } from "@/components/ui/icon-symbol";
@@ -30,9 +30,17 @@ import { ENERGY_TAGS, EnergyTag } from "@/lib/types";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const CIRCLE_SIZE = Math.min(SCREEN_WIDTH * 0.7, 280);
-const STROKE_WIDTH = 12;
+const STROKE_WIDTH = 14;
+const RADIUS = (CIRCLE_SIZE - STROKE_WIDTH) / 2;
+const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
-type TimerStatus = "idle" | "running" | "paused";
+// Time options for slider (5-60 minutes, step 5)
+const TIME_OPTIONS = Array.from({ length: 12 }, (_, i) => (i + 1) * 5);
+const SLIDER_ITEM_WIDTH = 60;
+
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+
+type TimerStatus = "idle" | "running";
 
 export default function FocusScreen() {
   useKeepAwake();
@@ -40,8 +48,11 @@ export default function FocusScreen() {
   const colors = useColors();
   const router = useRouter();
   const { state, addSession } = useStore();
+  const scrollViewRef = useRef<ScrollView>(null);
   
-  const [duration, setDuration] = useState(state.settings.defaultPomodoroMinutes);
+  const defaultIndex = TIME_OPTIONS.indexOf(state.settings.defaultPomodoroMinutes);
+  const [selectedIndex, setSelectedIndex] = useState(defaultIndex >= 0 ? defaultIndex : 4);
+  const [duration, setDuration] = useState(TIME_OPTIONS[selectedIndex]);
   const [remainingSeconds, setRemainingSeconds] = useState(duration * 60);
   const [status, setStatus] = useState<TimerStatus>("idle");
   const [showFeedback, setShowFeedback] = useState(false);
@@ -50,12 +61,13 @@ export default function FocusScreen() {
   const [sessionStartTime, setSessionStartTime] = useState<string | null>(null);
   
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const progress = useSharedValue(0);
+  const progress = useSharedValue(1); // 1 = full, 0 = empty
 
   // Update remaining seconds when duration changes (only in idle state)
   useEffect(() => {
     if (status === "idle") {
       setRemainingSeconds(duration * 60);
+      progress.value = 1;
     }
   }, [duration, status]);
 
@@ -86,18 +98,21 @@ export default function FocusScreen() {
     };
   }, [status]);
 
-  // Update progress animation
+  // Update progress animation - circle decreases as time passes
   useEffect(() => {
-    const totalSeconds = duration * 60;
-    const currentProgress = (totalSeconds - remainingSeconds) / totalSeconds;
-    progress.value = withTiming(currentProgress, {
-      duration: 300,
-      easing: Easing.linear,
-    });
-  }, [remainingSeconds, duration]);
+    if (status === "running") {
+      const totalSeconds = duration * 60;
+      const remainingRatio = remainingSeconds / totalSeconds;
+      progress.value = withTiming(remainingRatio, {
+        duration: 900,
+        easing: Easing.linear,
+      });
+    }
+  }, [remainingSeconds, duration, status]);
 
   const handleTimerComplete = useCallback(() => {
     setStatus("idle");
+    progress.value = 1;
     if (Platform.OS !== "web") {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
@@ -113,27 +128,13 @@ export default function FocusScreen() {
     setStatus("running");
   };
 
-  const handlePause = () => {
-    if (Platform.OS !== "web") {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
-    setStatus("paused");
-  };
-
-  const handleResume = () => {
-    if (Platform.OS !== "web") {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
-    setStatus("running");
-  };
-
   const handleStop = () => {
     if (Platform.OS !== "web") {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
     }
     setStatus("idle");
     setRemainingSeconds(duration * 60);
-    progress.value = withTiming(0, { duration: 300 });
+    progress.value = withTiming(1, { duration: 300 });
     setSessionStartTime(null);
   };
 
@@ -156,36 +157,50 @@ export default function FocusScreen() {
     setEnergyTag(null);
     setSessionStartTime(null);
     setRemainingSeconds(duration * 60);
-    progress.value = withTiming(0, { duration: 300 });
+    progress.value = withTiming(1, { duration: 300 });
   };
 
   const handleBack = () => {
-    if (status === "running" || status === "paused") {
+    if (status === "running") {
       // Confirm before leaving
       handleStop();
     }
     router.back();
   };
 
-  // Gesture for adjusting duration (only in idle state)
-  const panGesture = Gesture.Pan()
-    .enabled(status === "idle")
-    .runOnJS(true)
-    .onUpdate((event) => {
-      const delta = -event.translationY / 10;
-      const newDuration = Math.round(
-        Math.min(
-          state.settings.maxPomodoroMinutes,
-          Math.max(5, duration + delta)
-        )
-      );
-      if (newDuration !== duration) {
-        setDuration(newDuration);
-        if (Platform.OS !== "web") {
-          Haptics.selectionAsync();
-        }
+  // Handle time slider scroll
+  const handleScroll = (event: any) => {
+    if (status !== "idle") return;
+    
+    const offsetX = event.nativeEvent.contentOffset.x;
+    const index = Math.round(offsetX / SLIDER_ITEM_WIDTH);
+    const clampedIndex = Math.max(0, Math.min(TIME_OPTIONS.length - 1, index));
+    
+    if (clampedIndex !== selectedIndex) {
+      setSelectedIndex(clampedIndex);
+      setDuration(TIME_OPTIONS[clampedIndex]);
+      if (Platform.OS !== "web") {
+        Haptics.selectionAsync();
       }
+    }
+  };
+
+  const handleScrollEnd = (event: any) => {
+    if (status !== "idle") return;
+    
+    const offsetX = event.nativeEvent.contentOffset.x;
+    const index = Math.round(offsetX / SLIDER_ITEM_WIDTH);
+    const clampedIndex = Math.max(0, Math.min(TIME_OPTIONS.length - 1, index));
+    
+    // Snap to nearest item
+    scrollViewRef.current?.scrollTo({
+      x: clampedIndex * SLIDER_ITEM_WIDTH,
+      animated: true,
     });
+    
+    setSelectedIndex(clampedIndex);
+    setDuration(TIME_OPTIONS[clampedIndex]);
+  };
 
   // Format time display
   const formatTime = (seconds: number) => {
@@ -194,11 +209,19 @@ export default function FocusScreen() {
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
-  // Progress circle animation
-  const circumference = (CIRCLE_SIZE - STROKE_WIDTH) * Math.PI;
-  const animatedCircleStyle = useAnimatedStyle(() => {
+  // Animated props for the progress circle
+  const animatedCircleProps = useAnimatedProps(() => {
+    const strokeDashoffset = CIRCUMFERENCE * (1 - progress.value);
     return {
-      opacity: progress.value,
+      strokeDashoffset,
+    };
+  });
+
+  // Animated style for circle glow effect
+  const animatedGlowStyle = useAnimatedStyle(() => {
+    const opacity = interpolate(progress.value, [0, 0.3, 1], [0.3, 0.6, 1]);
+    return {
+      opacity,
     };
   });
 
@@ -223,63 +246,133 @@ export default function FocusScreen() {
 
       {/* Timer Circle */}
       <View className="flex-1 items-center justify-center">
-        <GestureDetector gesture={panGesture}>
-          <View style={styles.circleContainer}>
-            <Animated.View style={styles.svgContainer}>
+        <View style={styles.circleContainer}>
+          {/* SVG Progress Circle */}
+          <Animated.View style={[styles.svgContainer, animatedGlowStyle]}>
+            <Svg width={CIRCLE_SIZE} height={CIRCLE_SIZE}>
               {/* Background circle */}
-              <View
-                style={[
-                  styles.circleBackground,
-                  {
-                    width: CIRCLE_SIZE,
-                    height: CIRCLE_SIZE,
-                    borderRadius: CIRCLE_SIZE / 2,
-                    borderWidth: STROKE_WIDTH,
-                    borderColor: colors.surface,
-                  },
-                ]}
+              <Circle
+                cx={CIRCLE_SIZE / 2}
+                cy={CIRCLE_SIZE / 2}
+                r={RADIUS}
+                stroke={colors.surface}
+                strokeWidth={STROKE_WIDTH}
+                fill="none"
               />
-              {/* Progress circle (simplified without SVG for web compatibility) */}
-              <Animated.View
-                style={[
-                  styles.progressRing,
-                  {
-                    width: CIRCLE_SIZE,
-                    height: CIRCLE_SIZE,
-                    borderRadius: CIRCLE_SIZE / 2,
-                    borderWidth: STROKE_WIDTH,
-                    borderColor: colors.primary,
-                  },
-                  animatedCircleStyle,
-                ]}
+              {/* Progress circle - decreases as time passes */}
+              <AnimatedCircle
+                cx={CIRCLE_SIZE / 2}
+                cy={CIRCLE_SIZE / 2}
+                r={RADIUS}
+                stroke={colors.primary}
+                strokeWidth={STROKE_WIDTH}
+                fill="none"
+                strokeLinecap="round"
+                strokeDasharray={CIRCUMFERENCE}
+                animatedProps={animatedCircleProps}
+                rotation="-90"
+                origin={`${CIRCLE_SIZE / 2}, ${CIRCLE_SIZE / 2}`}
               />
-            </Animated.View>
-            
-            {/* Center content */}
-            <View style={styles.centerContent}>
-              <Text className="text-6xl mb-2">🍅</Text>
-              <Text
-                className="text-4xl font-bold text-foreground"
-                style={{ fontVariant: ["tabular-nums"] }}
-              >
-                {formatTime(remainingSeconds)}
+            </Svg>
+          </Animated.View>
+          
+          {/* Center content */}
+          <View style={styles.centerContent}>
+            <Text className="text-5xl mb-2">🍅</Text>
+            <Text
+              className="text-5xl font-bold text-foreground"
+              style={{ fontVariant: ["tabular-nums"] }}
+            >
+              {formatTime(remainingSeconds)}
+            </Text>
+            {status === "idle" && (
+              <Text className="text-muted text-sm mt-3">
+                滑动下方选择时间
               </Text>
-              {status === "idle" && (
-                <Text className="text-muted text-sm mt-2">
-                  上下滑动调整时间
-                </Text>
-              )}
-            </View>
+            )}
+            {status === "running" && (
+              <Text className="text-primary text-sm mt-3 font-medium">
+                专注中...
+              </Text>
+            )}
           </View>
-        </GestureDetector>
-
-        {/* Duration indicator */}
-        {status === "idle" && (
-          <Text className="text-muted mt-4">
-            {duration} 分钟
-          </Text>
-        )}
+        </View>
       </View>
+
+      {/* Time Slider - Only show in idle state */}
+      {status === "idle" && (
+        <View className="mb-6">
+          <View className="items-center mb-2">
+            <Text className="text-lg font-semibold text-foreground">
+              {duration} 分钟
+            </Text>
+          </View>
+          
+          <View style={styles.sliderContainer}>
+            {/* Left fade indicator */}
+            <View style={[styles.fadeIndicator, styles.fadeLeft, { backgroundColor: colors.background }]} />
+            
+            {/* Center indicator line */}
+            <View style={[styles.centerIndicator, { backgroundColor: colors.primary }]} />
+            
+            <ScrollView
+              ref={scrollViewRef}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              snapToInterval={SLIDER_ITEM_WIDTH}
+              decelerationRate="fast"
+              contentContainerStyle={{
+                paddingHorizontal: (SCREEN_WIDTH - SLIDER_ITEM_WIDTH) / 2,
+              }}
+              onScroll={handleScroll}
+              onMomentumScrollEnd={handleScrollEnd}
+              scrollEventThrottle={16}
+            >
+              {TIME_OPTIONS.map((time, index) => {
+                const isSelected = index === selectedIndex;
+                return (
+                  <Pressable
+                    key={time}
+                    onPress={() => {
+                      setSelectedIndex(index);
+                      setDuration(time);
+                      scrollViewRef.current?.scrollTo({
+                        x: index * SLIDER_ITEM_WIDTH,
+                        animated: true,
+                      });
+                      if (Platform.OS !== "web") {
+                        Haptics.selectionAsync();
+                      }
+                    }}
+                    style={[
+                      styles.sliderItem,
+                      { width: SLIDER_ITEM_WIDTH },
+                    ]}
+                  >
+                    <Text
+                      className={`text-lg font-medium ${
+                        isSelected ? "text-primary" : "text-muted"
+                      }`}
+                      style={[
+                        isSelected && { fontSize: 22, fontWeight: "700" },
+                      ]}
+                    >
+                      {time}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+            
+            {/* Right fade indicator */}
+            <View style={[styles.fadeIndicator, styles.fadeRight, { backgroundColor: colors.background }]} />
+          </View>
+          
+          <Text className="text-center text-muted text-xs mt-2">
+            左右滑动选择专注时长
+          </Text>
+        </View>
+      )}
 
       {/* Control Buttons */}
       <View className="px-6 pb-8">
@@ -298,57 +391,17 @@ export default function FocusScreen() {
         )}
 
         {status === "running" && (
-          <View className="flex-row justify-center gap-4">
-            <Pressable
-              onPress={handlePause}
-              style={({ pressed }) => [
-                styles.controlButton,
-                { backgroundColor: colors.warning },
-                pressed && { opacity: 0.9, transform: [{ scale: 0.97 }] },
-              ]}
-            >
-              <IconSymbol name="pause.fill" size={24} color="#fff" />
-              <Text className="text-white font-semibold ml-2">暂停</Text>
-            </Pressable>
-            <Pressable
-              onPress={handleStop}
-              style={({ pressed }) => [
-                styles.controlButton,
-                { backgroundColor: colors.error },
-                pressed && { opacity: 0.9, transform: [{ scale: 0.97 }] },
-              ]}
-            >
-              <IconSymbol name="stop.fill" size={24} color="#fff" />
-              <Text className="text-white font-semibold ml-2">放弃</Text>
-            </Pressable>
-          </View>
-        )}
-
-        {status === "paused" && (
-          <View className="flex-row justify-center gap-4">
-            <Pressable
-              onPress={handleResume}
-              style={({ pressed }) => [
-                styles.controlButton,
-                { backgroundColor: colors.success },
-                pressed && { opacity: 0.9, transform: [{ scale: 0.97 }] },
-              ]}
-            >
-              <IconSymbol name="play.fill" size={24} color="#fff" />
-              <Text className="text-white font-semibold ml-2">继续</Text>
-            </Pressable>
-            <Pressable
-              onPress={handleStop}
-              style={({ pressed }) => [
-                styles.controlButton,
-                { backgroundColor: colors.error },
-                pressed && { opacity: 0.9, transform: [{ scale: 0.97 }] },
-              ]}
-            >
-              <IconSymbol name="stop.fill" size={24} color="#fff" />
-              <Text className="text-white font-semibold ml-2">放弃</Text>
-            </Pressable>
-          </View>
+          <Pressable
+            onPress={handleStop}
+            style={({ pressed }) => [
+              styles.mainButton,
+              { backgroundColor: colors.error },
+              pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
+            ]}
+          >
+            <IconSymbol name="stop.fill" size={28} color="#fff" />
+            <Text className="text-white text-lg font-semibold ml-2">放弃</Text>
+          </Pressable>
         )}
       </View>
 
@@ -483,16 +536,41 @@ const styles = StyleSheet.create({
     width: CIRCLE_SIZE,
     height: CIRCLE_SIZE,
   },
-  circleBackground: {
-    position: "absolute",
-  },
-  progressRing: {
-    position: "absolute",
-    opacity: 0.3,
-  },
   centerContent: {
     alignItems: "center",
     justifyContent: "center",
+  },
+  sliderContainer: {
+    height: 60,
+    position: "relative",
+  },
+  sliderItem: {
+    height: 60,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  centerIndicator: {
+    position: "absolute",
+    top: 0,
+    left: "50%",
+    marginLeft: -1,
+    width: 2,
+    height: 60,
+    zIndex: 10,
+    opacity: 0.3,
+  },
+  fadeIndicator: {
+    position: "absolute",
+    top: 0,
+    width: 60,
+    height: 60,
+    zIndex: 5,
+  },
+  fadeLeft: {
+    left: 0,
+  },
+  fadeRight: {
+    right: 0,
   },
   mainButton: {
     flexDirection: "row",
@@ -500,15 +578,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingVertical: 16,
     borderRadius: 16,
-  },
-  controlButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    minWidth: 120,
   },
   modalOverlay: {
     flex: 1,
