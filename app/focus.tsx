@@ -29,8 +29,8 @@ import { useColors } from "@/hooks/use-colors";
 import { ENERGY_TAGS, EnergyTag } from "@/lib/types";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
-const CIRCLE_SIZE = Math.min(SCREEN_WIDTH * 0.7, 280);
-const STROKE_WIDTH = 14;
+const CIRCLE_SIZE = Math.min(SCREEN_WIDTH * 0.8, 320);
+const STROKE_WIDTH = 16;
 const RADIUS = (CIRCLE_SIZE - STROKE_WIDTH) / 2;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
@@ -278,10 +278,14 @@ export default function FocusScreen() {
           
           {/* Center content */}
           <View style={styles.centerContent}>
-            <Text className="text-5xl mb-2">🍅</Text>
+            <Text style={{ fontSize: status === "running" ? 72 : 48, marginBottom: 8 }}>🍅</Text>
             <Text
-              className="text-5xl font-bold text-foreground"
-              style={{ fontVariant: ["tabular-nums"] }}
+              className="font-bold text-foreground"
+              style={{ 
+                fontSize: status === "running" ? 64 : 48,
+                fontVariant: ["tabular-nums"],
+                letterSpacing: status === "running" ? 2 : 0,
+              }}
             >
               {formatTime(remainingSeconds)}
             </Text>
