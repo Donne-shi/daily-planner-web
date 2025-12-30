@@ -295,9 +295,14 @@ export default function FocusScreen() {
               </Text>
             )}
             {status === "running" && (
-              <Text className="text-primary text-sm mt-3 font-medium">
-                专注中...
-              </Text>
+              <View className="items-center mt-3">
+                <Text className="text-primary text-sm font-medium">
+                  专注中...
+                </Text>
+                <Text className="text-muted text-xs mt-1" style={{ fontVariant: ["tabular-nums"] }}>
+                  已专注 {formatTime(duration * 60 - remainingSeconds)}
+                </Text>
+              </View>
             )}
           </View>
         </View>
