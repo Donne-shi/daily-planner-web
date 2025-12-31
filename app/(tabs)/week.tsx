@@ -22,13 +22,25 @@ import { TodoTask, PomodoroSession, WeeklyReflection } from "@/lib/types";
 // Get week days
 function getWeekDays(weekStartDate: string): string[] {
   const days: string[] = [];
-  const start = new Date(weekStartDate);
+  const [year, month, date] = weekStartDate.split('-').map(Number);
+  const start = new Date(year, month - 1, date);
   for (let i = 0; i < 7; i++) {
     const day = new Date(start);
     day.setDate(start.getDate() + i);
-    days.push(day.toISOString().split("T")[0]);
+    const y = day.getFullYear();
+    const m = String(day.getMonth() + 1).padStart(2, '0');
+    const d = String(day.getDate()).padStart(2, '0');
+    days.push(`${y}-${m}-${d}`);
   }
   return days;
+}
+
+// Format date to local YYYY-MM-DD string (avoids timezone issues)
+function formatLocalDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 // Get month days for calendar view
@@ -49,7 +61,7 @@ function getMonthDays(year: number, month: number): (string | null)[][] {
   // Fill days
   for (let day = 1; day <= daysInMonth; day++) {
     const date = new Date(year, month, day);
-    currentWeek.push(date.toISOString().split("T")[0]);
+    currentWeek.push(formatLocalDate(date));
     
     if (currentWeek.length === 7) {
       weeks.push(currentWeek);
@@ -114,9 +126,13 @@ export default function WeekScreen() {
   
   // Calculate displayed week based on offset
   const displayedWeekStart = useMemo(() => {
-    const start = new Date(currentWeekStart);
+    const [year, month, date] = currentWeekStart.split('-').map(Number);
+    const start = new Date(year, month - 1, date);
     start.setDate(start.getDate() + currentWeekOffset * 7);
-    return start.toISOString().split("T")[0];
+    const y = start.getFullYear();
+    const m = String(start.getMonth() + 1).padStart(2, '0');
+    const d = String(start.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
   }, [currentWeekStart, currentWeekOffset]);
   
   const weekDays = useMemo(() => getWeekDays(displayedWeekStart), [displayedWeekStart]);
