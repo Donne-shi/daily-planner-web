@@ -567,38 +567,88 @@ ${top3Tasks.length > 0 ? top3Tasks.map((t, i) => `${i + 1}. ${t.title}`).join("\
                       ).toFixed(1)
                     : "-";
 
+                // Group sessions by hour
+                const sessionsByHour: { [hour: number]: typeof sessions } = {};
+                sessions.forEach((s) => {
+                  const hour = new Date(s.startAt).getHours();
+                  if (!sessionsByHour[hour]) sessionsByHour[hour] = [];
+                  sessionsByHour[hour].push(s);
+                });
+                const sortedHours = Object.keys(sessionsByHour).map(Number).sort((a, b) => a - b);
+
                 return (
                   <>
-                    <View className="flex-row justify-between mb-3">
-                      <Text className="text-muted">完成任务</Text>
-                      <Text className="text-foreground font-medium">
-                        {tasks.length} 项
-                      </Text>
+                    {/* Stats Row - Numbers on top, labels below */}
+                    <View className="flex-row justify-around mb-4">
+                      <View className="items-center flex-1">
+                        <Text className="text-2xl font-bold" style={{ color: colors.primary }}>
+                          {tasks.length}
+                        </Text>
+                        <Text className="text-muted text-xs mt-1">完成任务</Text>
+                      </View>
+                      <View className="items-center flex-1">
+                        <Text className="text-2xl font-bold" style={{ color: colors.primary }}>
+                          {sessions.length}
+                        </Text>
+                        <Text className="text-muted text-xs mt-1">番茄次数</Text>
+                      </View>
+                      <View className="items-center flex-1">
+                        <Text className="text-2xl font-bold" style={{ color: colors.primary }}>
+                          {totalMinutes}
+                        </Text>
+                        <Text className="text-muted text-xs mt-1">专注分钟</Text>
+                      </View>
+                      <View className="items-center flex-1">
+                        <Text className="text-2xl font-bold" style={{ color: colors.primary }}>
+                          {avgEnergy}
+                        </Text>
+                        <Text className="text-muted text-xs mt-1">平均精力</Text>
+                      </View>
                     </View>
-                    <View className="flex-row justify-between mb-3">
-                      <Text className="text-muted">番茄次数</Text>
-                      <Text className="text-foreground font-medium">
-                        {sessions.length} 个
-                      </Text>
-                    </View>
-                    <View className="flex-row justify-between mb-3">
-                      <Text className="text-muted">专注时长</Text>
-                      <Text className="text-foreground font-medium">
-                        {totalMinutes} 分钟
-                      </Text>
-                    </View>
-                    <View className="flex-row justify-between">
-                      <Text className="text-muted">平均精力</Text>
-                      <Text className="text-foreground font-medium">{avgEnergy}</Text>
-                    </View>
+
+                    {/* Hourly Timeline */}
+                    {sortedHours.length > 0 && (
+                      <View className="mt-2 pt-3 border-t border-border">
+                        <Text className="text-sm font-medium text-foreground mb-3">🍅 番茄时间分布</Text>
+                        {sortedHours.map((hour) => (
+                          <View key={hour} className="flex-row items-center mb-2">
+                            <Text className="text-muted text-sm w-12">
+                              {String(hour).padStart(2, '0')}:00
+                            </Text>
+                            <View className="flex-1 flex-row flex-wrap ml-2">
+                              {sessionsByHour[hour].map((s, i) => (
+                                <View
+                                  key={s.id}
+                                  className="rounded-full px-2 py-1 mr-1 mb-1"
+                                  style={{ backgroundColor: colors.primary + '20' }}
+                                >
+                                  <Text className="text-xs" style={{ color: colors.primary }}>
+                                    {s.durationMinutes}分钟 {s.energyScore ? `· 精力${s.energyScore}` : ''}
+                                  </Text>
+                                </View>
+                              ))}
+                            </View>
+                          </View>
+                        ))}
+                      </View>
+                    )}
+
+                    {/* Completed Tasks */}
                     {tasks.length > 0 && (
-                      <View className="mt-4 pt-3 border-t border-border">
-                        <Text className="text-sm text-muted mb-2">完成的任务:</Text>
+                      <View className="mt-3 pt-3 border-t border-border">
+                        <Text className="text-sm font-medium text-foreground mb-2">✅ 完成的任务</Text>
                         {tasks.map((task) => (
-                          <Text key={task.id} className="text-foreground text-sm mb-1">
-                            ✓ {task.title}
+                          <Text key={task.id} className="text-muted text-sm mb-1">
+                            • {task.title}
                           </Text>
                         ))}
+                      </View>
+                    )}
+
+                    {/* Empty State */}
+                    {sessions.length === 0 && tasks.length === 0 && (
+                      <View className="items-center py-4">
+                        <Text className="text-muted text-sm">这一天还没有记录</Text>
                       </View>
                     )}
                   </>

@@ -54,6 +54,13 @@ export default function SettingsScreen() {
     updateSettings({ voiceEnabled: value });
   };
 
+  const handleVibrationToggle = (value: boolean) => {
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    updateSettings({ vibrationEnabled: value });
+  };
+
   const handleDarkModeToggle = (value: boolean) => {
     if (Platform.OS !== "web") {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -184,14 +191,26 @@ export default function SettingsScreen() {
             🔔 提醒设置
           </Text>
           <View className="bg-surface rounded-2xl overflow-hidden">
-            <View className="flex-row items-center justify-between px-4 py-4">
+            <View className="flex-row items-center justify-between px-4 py-4 border-b border-border">
               <View>
-                <Text className="text-foreground font-medium">语音提示</Text>
+                <Text className="text-foreground font-medium">提示音</Text>
                 <Text className="text-muted text-sm">番茄完成时播放提示音</Text>
               </View>
               <Switch
                 value={state.settings.voiceEnabled}
                 onValueChange={handleVoiceToggle}
+                trackColor={{ false: colors.border, true: colors.primary }}
+                thumbColor="#fff"
+              />
+            </View>
+            <View className="flex-row items-center justify-between px-4 py-4">
+              <View>
+                <Text className="text-foreground font-medium">震动提醒</Text>
+                <Text className="text-muted text-sm">番茄完成时震动提醒</Text>
+              </View>
+              <Switch
+                value={state.settings.vibrationEnabled ?? true}
+                onValueChange={handleVibrationToggle}
                 trackColor={{ false: colors.border, true: colors.primary }}
                 thumbColor="#fff"
               />

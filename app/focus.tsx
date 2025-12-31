@@ -12,6 +12,7 @@ import {
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { useKeepAwake } from "expo-keep-awake";
+import { useAudioPlayer, setAudioModeAsync } from "expo-audio";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -41,6 +42,45 @@ const SLIDER_ITEM_WIDTH = 60;
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 type TimerStatus = "idle" | "running";
+
+// Simple beep sound using Web Audio API for web, or a placeholder for native
+const playCompletionSound = () => {
+  if (Platform.OS === "web") {
+    try {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      oscillator.frequency.value = 800;
+      oscillator.type = "sine";
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+      
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.5);
+      
+      // Play a second beep
+      setTimeout(() => {
+        const osc2 = audioContext.createOscillator();
+        const gain2 = audioContext.createGain();
+        osc2.connect(gain2);
+        gain2.connect(audioContext.destination);
+        osc2.frequency.value = 1000;
+        osc2.type = "sine";
+        gain2.gain.setValueAtTime(0.3, audioContext.currentTime);
+        gain2.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+        osc2.start(audioContext.currentTime);
+        osc2.stop(audioContext.currentTime + 0.5);
+      }, 200);
+    } catch (e) {
+      console.log("Audio not supported");
+    }
+  }
+  // For native, the haptic feedback is the primary notification
+};
 
 export default function FocusScreen() {
   useKeepAwake();
@@ -129,12 +169,21 @@ export default function FocusScreen() {
   const handleTimerComplete = useCallback(() => {
     setStatus("idle");
     progress.value = 1;
-    if (Platform.OS !== "web") {
+    
+    // Vibration feedback based on settings
+    if (Platform.OS !== "web" && state.settings.vibrationEnabled) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
+    
+    // Audio feedback based on settings
+    if (state.settings.voiceEnabled) {
+      // Play completion sound using Web Audio API or expo-audio
+      playCompletionSound();
+    }
+    
     // Show feedback modal
     setShowFeedback(true);
-  }, []);
+  }, [state.settings.vibrationEnabled, state.settings.voiceEnabled]);
 
   const handleStart = () => {
     if (Platform.OS !== "web") {

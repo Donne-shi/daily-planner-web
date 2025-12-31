@@ -54,6 +54,7 @@ export interface AppSettings {
   defaultPomodoroMinutes: number;
   maxPomodoroMinutes: number;
   voiceEnabled: boolean;
+  vibrationEnabled: boolean;
   darkMode: boolean;
   mission?: string;
   vision?: string;
@@ -67,5 +68,6 @@ export const DEFAULT_SETTINGS: AppSettings = {
   defaultPomodoroMinutes: 25,
   maxPomodoroMinutes: 60,
   voiceEnabled: true,
+  vibrationEnabled: true,
   darkMode: false,
 };
