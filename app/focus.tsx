@@ -228,12 +228,13 @@ export default function FocusScreen() {
   return (
     <ScreenContainer edges={["top", "bottom", "left", "right"]} className="flex-1">
       {/* Header */}
-      <View className="flex-row items-center px-4 py-2">
+      <View className="flex-row items-center px-4 py-3" style={{ zIndex: 100 }}>
         <Pressable
           onPress={handleBack}
+          hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
           style={({ pressed }) => [
             styles.backButton,
-            pressed && { opacity: 0.7 },
+            pressed && { opacity: 0.7, backgroundColor: colors.surface },
           ]}
         >
           <IconSymbol name="chevron.left" size={28} color={colors.foreground} />
@@ -529,8 +530,9 @@ export default function FocusScreen() {
 
 const styles = StyleSheet.create({
   backButton: {
-    width: 44,
-    height: 44,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     alignItems: "center",
     justifyContent: "center",
   },
