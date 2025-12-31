@@ -51,8 +51,9 @@ export default function FocusScreen() {
   const scrollViewRef = useRef<ScrollView>(null);
   
   const defaultIndex = TIME_OPTIONS.indexOf(state.settings.defaultPomodoroMinutes);
-  const [selectedIndex, setSelectedIndex] = useState(defaultIndex >= 0 ? defaultIndex : 4);
-  const [duration, setDuration] = useState(TIME_OPTIONS[selectedIndex]);
+  const initialIndex = defaultIndex >= 0 ? defaultIndex : 4; // 25 minutes is index 4
+  const [selectedIndex, setSelectedIndex] = useState(initialIndex);
+  const [duration, setDuration] = useState(TIME_OPTIONS[initialIndex]);
   const [remainingSeconds, setRemainingSeconds] = useState(duration * 60);
   const [status, setStatus] = useState<TimerStatus>("idle");
   const [showFeedback, setShowFeedback] = useState(false);
@@ -62,6 +63,21 @@ export default function FocusScreen() {
   
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const progress = useSharedValue(1); // 1 = full, 0 = empty
+  const hasInitializedScroll = useRef(false);
+
+  // Scroll to default position on mount
+  useEffect(() => {
+    if (!hasInitializedScroll.current && scrollViewRef.current) {
+      const targetIndex = defaultIndex >= 0 ? defaultIndex : 4; // 25 minutes is index 4
+      setTimeout(() => {
+        scrollViewRef.current?.scrollTo({
+          x: targetIndex * SLIDER_ITEM_WIDTH,
+          animated: false,
+        });
+      }, 100);
+      hasInitializedScroll.current = true;
+    }
+  }, [defaultIndex]);
 
   // Update remaining seconds when duration changes (only in idle state)
   useEffect(() => {
