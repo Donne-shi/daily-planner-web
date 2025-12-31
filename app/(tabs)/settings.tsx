@@ -271,7 +271,7 @@ export default function SettingsScreen() {
         {/* App Info */}
         <View className="items-center py-8">
           <Text className="text-4xl mb-2">🍅</Text>
-          <Text className="text-foreground font-semibold">每日计划工具</Text>
+          <Text className="text-foreground font-semibold">时间好管家</Text>
           <Text className="text-muted text-sm mt-1">
             专注效率，成就更好的自己
           </Text>
