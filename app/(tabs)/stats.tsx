@@ -10,17 +10,18 @@ import {
 } from "react-native";
 import { Platform } from "react-native";
 import * as Haptics from "expo-haptics";
+import Svg, { Path, Circle, Line, Defs, LinearGradient, Stop, Text as SvgText } from "react-native-svg";
 
 import { ScreenContainer } from "@/components/screen-container";
-import { useStore, getWeekStartDate } from "@/lib/store";
+import { useStore, getWeekStartDate, getToday } from "@/lib/store";
 import { useColors } from "@/hooks/use-colors";
 import { PomodoroSession } from "@/lib/types";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const CHART_WIDTH = SCREEN_WIDTH - 64;
-const CHART_HEIGHT = 180;
+const CHART_HEIGHT = 200;
 
-type TimeRange = "week" | "month" | "year";
+type TimeRange = "today" | "week" | "month";
 
 // Helper functions
 function getWeekDays(weekStartDate: string): string[] {
@@ -45,33 +46,83 @@ function getMonthDays(): string[] {
   return days;
 }
 
-function getYearMonths(): string[] {
-  const months: string[] = [];
-  const today = new Date();
-  for (let i = 11; i >= 0; i--) {
-    const month = new Date(today.getFullYear(), today.getMonth() - i, 1);
-    months.push(`${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, "0")}`);
-  }
-  return months;
+// Get hour from completedAt timestamp
+function getHourFromTimestamp(timestamp: string): number {
+  const date = new Date(timestamp);
+  return date.getHours();
 }
 
 export default function StatsScreen() {
   const colors = useColors();
   const { state } = useStore();
-  const [timeRange, setTimeRange] = useState<TimeRange>("week");
+  const [timeRange, setTimeRange] = useState<TimeRange>("today");
 
   const weekStartDate = getWeekStartDate();
+  const today = getToday();
 
   // Calculate stats based on time range
   const stats = useMemo(() => {
     let sessions: PomodoroSession[] = [];
     let labels: string[] = [];
     let energyData: (number | null)[] = [];
+    let peakHour: { hour: string; value: number } | null = null;
+    let lowHour: { hour: string; value: number } | null = null;
+    let avgEnergy: number | null = null;
+    let dataPointCount = 0;
 
-    if (timeRange === "week") {
+    if (timeRange === "today") {
+      // Today view: show hourly energy curve
+      // Hours from 6:00 to 23:00
+      const hours = Array.from({ length: 18 }, (_, i) => i + 6);
+      labels = hours.map((h) => `${h}:00`);
+
+      sessions = state.sessions.filter(
+        (s) => s.isCompleted && s.date === today
+      );
+
+      // Group sessions by hour and calculate average energy
+      const hourlyEnergy: { [hour: number]: number[] } = {};
+      sessions.forEach((s) => {
+        if (s.energyScore && s.endAt) {
+          const hour = getHourFromTimestamp(s.endAt);
+          if (hour >= 6 && hour <= 23) {
+            if (!hourlyEnergy[hour]) hourlyEnergy[hour] = [];
+            hourlyEnergy[hour].push(s.energyScore);
+          }
+        }
+      });
+
+      energyData = hours.map((hour) => {
+        const scores = hourlyEnergy[hour];
+        if (!scores || scores.length === 0) return null;
+        const avg = scores.reduce((sum, s) => sum + s, 0) / scores.length;
+        return Math.round(avg * 10) / 10;
+      });
+
+      // Find peak and low hours
+      let maxVal = 0, minVal = 6, maxIdx = -1, minIdx = -1;
+      energyData.forEach((val, idx) => {
+        if (val !== null) {
+          dataPointCount++;
+          if (val > maxVal) { maxVal = val; maxIdx = idx; }
+          if (val < minVal) { minVal = val; minIdx = idx; }
+        }
+      });
+
+      if (maxIdx >= 0) peakHour = { hour: labels[maxIdx], value: maxVal };
+      if (minIdx >= 0 && minVal < 6) lowHour = { hour: labels[minIdx], value: minVal };
+
+      // Calculate average energy
+      const validScores = energyData.filter((v) => v !== null) as number[];
+      if (validScores.length > 0) {
+        avgEnergy = Math.round((validScores.reduce((a, b) => a + b, 0) / validScores.length) * 10) / 10;
+      }
+
+    } else if (timeRange === "week") {
+      // Week view: show daily average energy
       const weekDays = getWeekDays(weekStartDate);
-      labels = ["一", "二", "三", "四", "五", "六", "日"];
-      
+      labels = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"];
+
       sessions = state.sessions.filter(
         (s) => s.isCompleted && weekDays.includes(s.date)
       );
@@ -86,10 +137,33 @@ export default function StatsScreen() {
           daySessions.length;
         return Math.round(avg * 10) / 10;
       });
-    } else if (timeRange === "month") {
+
+      // Find peak and low days
+      let maxVal = 0, minVal = 6, maxIdx = -1, minIdx = -1;
+      energyData.forEach((val, idx) => {
+        if (val !== null) {
+          dataPointCount++;
+          if (val > maxVal) { maxVal = val; maxIdx = idx; }
+          if (val < minVal) { minVal = val; minIdx = idx; }
+        }
+      });
+
+      if (maxIdx >= 0) peakHour = { hour: labels[maxIdx], value: maxVal };
+      if (minIdx >= 0 && minVal < 6) lowHour = { hour: labels[minIdx], value: minVal };
+
+      const validScores = energyData.filter((v) => v !== null) as number[];
+      if (validScores.length > 0) {
+        avgEnergy = Math.round((validScores.reduce((a, b) => a + b, 0) / validScores.length) * 10) / 10;
+      }
+
+    } else {
+      // Month view: show daily average energy for last 30 days
       const monthDays = getMonthDays();
-      labels = monthDays.map((d) => new Date(d).getDate().toString());
-      
+      labels = monthDays.map((d) => {
+        const date = new Date(d);
+        return `${date.getMonth() + 1}/${date.getDate()}`;
+      });
+
       sessions = state.sessions.filter(
         (s) => s.isCompleted && monthDays.includes(s.date)
       );
@@ -104,32 +178,24 @@ export default function StatsScreen() {
           daySessions.length;
         return Math.round(avg * 10) / 10;
       });
-    } else {
-      const yearMonths = getYearMonths();
-      labels = yearMonths.map((m) => {
-        const [year, month] = m.split("-");
-        return `${month}月`;
+
+      // Find peak and low days
+      let maxVal = 0, minVal = 6, maxIdx = -1, minIdx = -1;
+      energyData.forEach((val, idx) => {
+        if (val !== null) {
+          dataPointCount++;
+          if (val > maxVal) { maxVal = val; maxIdx = idx; }
+          if (val < minVal) { minVal = val; minIdx = idx; }
+        }
       });
 
-      sessions = state.sessions.filter((s) => {
-        if (!s.isCompleted) return false;
-        const sessionMonth = s.date.substring(0, 7);
-        return yearMonths.includes(sessionMonth);
-      });
+      if (maxIdx >= 0) peakHour = { hour: labels[maxIdx], value: maxVal };
+      if (minIdx >= 0 && minVal < 6) lowHour = { hour: labels[minIdx], value: minVal };
 
-      energyData = yearMonths.map((month) => {
-        const monthSessions = state.sessions.filter(
-          (s) =>
-            s.isCompleted &&
-            s.date.startsWith(month) &&
-            s.energyScore
-        );
-        if (monthSessions.length === 0) return null;
-        const avg =
-          monthSessions.reduce((sum, s) => sum + (s.energyScore || 0), 0) /
-          monthSessions.length;
-        return Math.round(avg * 10) / 10;
-      });
+      const validScores = energyData.filter((v) => v !== null) as number[];
+      if (validScores.length > 0) {
+        avgEnergy = Math.round((validScores.reduce((a, b) => a + b, 0) / validScores.length) * 10) / 10;
+      }
     }
 
     const totalMinutes = sessions.reduce((sum, s) => sum + s.durationMinutes, 0);
@@ -139,8 +205,12 @@ export default function StatsScreen() {
       focusMinutes: totalMinutes,
       labels,
       energyData,
+      peakHour,
+      lowHour,
+      avgEnergy,
+      dataPointCount,
     };
-  }, [state.sessions, timeRange, weekStartDate]);
+  }, [state.sessions, timeRange, weekStartDate, today]);
 
   const handleTimeRangeChange = (range: TimeRange) => {
     if (Platform.OS !== "web") {
@@ -159,8 +229,7 @@ export default function StatsScreen() {
   }
 
   // Calculate chart dimensions
-  const maxEnergy = 5;
-  const chartPadding = { top: 20, right: 10, bottom: 30, left: 30 };
+  const chartPadding = { top: 20, right: 15, bottom: 35, left: 35 };
   const chartInnerWidth = CHART_WIDTH - chartPadding.left - chartPadding.right;
   const chartInnerHeight = CHART_HEIGHT - chartPadding.top - chartPadding.bottom;
 
@@ -168,6 +237,62 @@ export default function StatsScreen() {
   const validPoints = stats.energyData
     .map((value, index) => ({ value, index }))
     .filter((p) => p.value !== null) as { value: number; index: number }[];
+
+  // Generate SVG path for the line chart
+  const generateLinePath = () => {
+    if (validPoints.length < 2) return "";
+    
+    const points = validPoints.map((p) => {
+      const x = chartPadding.left + (p.index / (stats.labels.length - 1)) * chartInnerWidth;
+      const y = chartPadding.top + chartInnerHeight - ((p.value - 1) / 4) * chartInnerHeight;
+      return { x, y };
+    });
+
+    // Create smooth curve using bezier
+    let path = `M ${points[0].x} ${points[0].y}`;
+    for (let i = 1; i < points.length; i++) {
+      const prev = points[i - 1];
+      const curr = points[i];
+      const cpx = (prev.x + curr.x) / 2;
+      path += ` Q ${cpx} ${prev.y} ${cpx} ${(prev.y + curr.y) / 2}`;
+      path += ` Q ${cpx} ${curr.y} ${curr.x} ${curr.y}`;
+    }
+    return path;
+  };
+
+  // Generate area path for gradient fill
+  const generateAreaPath = () => {
+    if (validPoints.length < 2) return "";
+    
+    const points = validPoints.map((p) => {
+      const x = chartPadding.left + (p.index / (stats.labels.length - 1)) * chartInnerWidth;
+      const y = chartPadding.top + chartInnerHeight - ((p.value - 1) / 4) * chartInnerHeight;
+      return { x, y };
+    });
+
+    const bottomY = chartPadding.top + chartInnerHeight;
+    let path = `M ${points[0].x} ${bottomY}`;
+    path += ` L ${points[0].x} ${points[0].y}`;
+    
+    for (let i = 1; i < points.length; i++) {
+      const prev = points[i - 1];
+      const curr = points[i];
+      const cpx = (prev.x + curr.x) / 2;
+      path += ` Q ${cpx} ${prev.y} ${cpx} ${(prev.y + curr.y) / 2}`;
+      path += ` Q ${cpx} ${curr.y} ${curr.x} ${curr.y}`;
+    }
+    
+    path += ` L ${points[points.length - 1].x} ${bottomY}`;
+    path += " Z";
+    return path;
+  };
+
+  // Get label display interval based on time range
+  const getLabelInterval = () => {
+    if (timeRange === "today") return 3; // Show every 3 hours
+    if (timeRange === "week") return 1; // Show all days
+    return 5; // Show every 5 days for month
+  };
 
   return (
     <ScreenContainer className="flex-1">
@@ -184,7 +309,7 @@ export default function StatsScreen() {
 
         {/* Time Range Selector */}
         <View className="flex-row bg-surface rounded-xl p-1 mb-6">
-          {(["week", "month", "year"] as TimeRange[]).map((range) => (
+          {(["today", "week", "month"] as TimeRange[]).map((range) => (
             <Pressable
               key={range}
               onPress={() => handleTimeRangeChange(range)}
@@ -199,7 +324,7 @@ export default function StatsScreen() {
                   timeRange === range ? "text-white" : "text-foreground"
                 }`}
               >
-                {range === "week" ? "本周" : range === "month" ? "本月" : "本年度"}
+                {range === "today" ? "今日" : range === "week" ? "本周" : "本月"}
               </Text>
             </Pressable>
           ))}
@@ -223,10 +348,40 @@ export default function StatsScreen() {
           </View>
         </View>
 
+        {/* Energy Insights */}
+        {stats.dataPointCount > 0 && (
+          <View className="flex-row gap-3 mb-4">
+            {stats.peakHour && (
+              <View className="flex-1 bg-success/10 rounded-xl p-3">
+                <Text className="text-success text-xs font-medium">🔥 精力峰值</Text>
+                <Text className="text-foreground font-bold mt-1">{stats.peakHour.hour}</Text>
+                <Text className="text-muted text-xs">{stats.peakHour.value} 分</Text>
+              </View>
+            )}
+            {stats.lowHour && (
+              <View className="flex-1 bg-warning/10 rounded-xl p-3">
+                <Text className="text-warning text-xs font-medium">😴 精力低谷</Text>
+                <Text className="text-foreground font-bold mt-1">{stats.lowHour.hour}</Text>
+                <Text className="text-muted text-xs">{stats.lowHour.value} 分</Text>
+              </View>
+            )}
+            {stats.avgEnergy && (
+              <View className="flex-1 bg-primary/10 rounded-xl p-3">
+                <Text className="text-primary text-xs font-medium">📊 平均精力</Text>
+                <Text className="text-foreground font-bold mt-1">{stats.avgEnergy} 分</Text>
+                <Text className="text-muted text-xs">基于 {stats.dataPointCount} 个数据</Text>
+              </View>
+            )}
+          </View>
+        )}
+
         {/* Energy Chart */}
         <View className="bg-surface rounded-2xl p-4">
           <Text className="text-lg font-semibold text-foreground mb-4">
             ⚡ 精力曲线
+            {timeRange === "today" && " (按小时)"}
+            {timeRange === "week" && " (按天)"}
+            {timeRange === "month" && " (近30天)"}
           </Text>
 
           {validPoints.length === 0 ? (
@@ -238,128 +393,127 @@ export default function StatsScreen() {
             </View>
           ) : (
             <View style={{ width: CHART_WIDTH, height: CHART_HEIGHT }}>
-              {/* Y-axis labels */}
-              <View
-                style={[
-                  styles.yAxisLabels,
-                  { height: chartInnerHeight, top: chartPadding.top },
-                ]}
-              >
-                {[5, 4, 3, 2, 1].map((value) => (
-                  <Text key={value} className="text-muted text-xs">
-                    {value}
-                  </Text>
-                ))}
-              </View>
+              <Svg width={CHART_WIDTH} height={CHART_HEIGHT}>
+                <Defs>
+                  <LinearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
+                    <Stop offset="0%" stopColor={colors.primary} stopOpacity="0.3" />
+                    <Stop offset="100%" stopColor={colors.primary} stopOpacity="0.05" />
+                  </LinearGradient>
+                </Defs>
 
-              {/* Chart area */}
-              <View
-                style={[
-                  styles.chartArea,
-                  {
-                    left: chartPadding.left,
-                    top: chartPadding.top,
-                    width: chartInnerWidth,
-                    height: chartInnerHeight,
-                  },
-                ]}
-              >
                 {/* Grid lines */}
-                {[1, 2, 3, 4, 5].map((value) => (
-                  <View
-                    key={value}
-                    style={[
-                      styles.gridLine,
-                      {
-                        bottom: ((value - 1) / 4) * chartInnerHeight,
-                        backgroundColor: colors.border,
-                      },
-                    ]}
-                  />
-                ))}
-
-                {/* Data points and lines */}
-                {validPoints.map((point, idx) => {
-                  const x = (point.index / (stats.labels.length - 1)) * chartInnerWidth;
-                  const y = chartInnerHeight - ((point.value - 1) / 4) * chartInnerHeight;
-
+                {[1, 2, 3, 4, 5].map((value) => {
+                  const y = chartPadding.top + chartInnerHeight - ((value - 1) / 4) * chartInnerHeight;
                   return (
-                    <View
-                      key={idx}
-                      style={[
-                        styles.dataPoint,
-                        {
-                          left: x - 5,
-                          top: y - 5,
-                          backgroundColor: colors.primary,
-                        },
-                      ]}
+                    <Line
+                      key={value}
+                      x1={chartPadding.left}
+                      y1={y}
+                      x2={chartPadding.left + chartInnerWidth}
+                      y2={y}
+                      stroke={colors.border}
+                      strokeWidth={1}
+                      strokeDasharray={value === 3 ? "0" : "4,4"}
+                      opacity={value === 3 ? 0.5 : 0.3}
                     />
                   );
                 })}
 
-                {/* Connect points with lines */}
-                {validPoints.length > 1 &&
-                  validPoints.slice(0, -1).map((point, idx) => {
-                    const nextPoint = validPoints[idx + 1];
-                    const x1 = (point.index / (stats.labels.length - 1)) * chartInnerWidth;
-                    const y1 = chartInnerHeight - ((point.value - 1) / 4) * chartInnerHeight;
-                    const x2 = (nextPoint.index / (stats.labels.length - 1)) * chartInnerWidth;
-                    const y2 = chartInnerHeight - ((nextPoint.value - 1) / 4) * chartInnerHeight;
+                {/* Reference line at 3 (middle energy) */}
+                <Line
+                  x1={chartPadding.left}
+                  y1={chartPadding.top + chartInnerHeight / 2}
+                  x2={chartPadding.left + chartInnerWidth}
+                  y2={chartPadding.top + chartInnerHeight / 2}
+                  stroke={colors.muted}
+                  strokeWidth={1}
+                  strokeDasharray="6,3"
+                  opacity={0.5}
+                />
 
-                    const length = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
-                    const angle = Math.atan2(y2 - y1, x2 - x1) * (180 / Math.PI);
+                {/* Area fill */}
+                {validPoints.length >= 2 && (
+                  <Path
+                    d={generateAreaPath()}
+                    fill="url(#areaGradient)"
+                  />
+                )}
 
-                    return (
-                      <View
-                        key={`line-${idx}`}
-                        style={[
-                          styles.line,
-                          {
-                            left: x1,
-                            top: y1,
-                            width: length,
-                            backgroundColor: colors.primary,
-                            transform: [{ rotate: `${angle}deg` }],
-                          },
-                        ]}
-                      />
-                    );
-                  })}
-              </View>
+                {/* Line */}
+                {validPoints.length >= 2 && (
+                  <Path
+                    d={generateLinePath()}
+                    stroke={colors.primary}
+                    strokeWidth={2.5}
+                    fill="none"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                )}
 
-              {/* X-axis labels */}
+                {/* Data points */}
+                {validPoints.map((point, idx) => {
+                  const x = chartPadding.left + (point.index / (stats.labels.length - 1)) * chartInnerWidth;
+                  const y = chartPadding.top + chartInnerHeight - ((point.value - 1) / 4) * chartInnerHeight;
+                  return (
+                    <Circle
+                      key={idx}
+                      cx={x}
+                      cy={y}
+                      r={5}
+                      fill={colors.primary}
+                      stroke="#fff"
+                      strokeWidth={2}
+                    />
+                  );
+                })}
+
+                {/* Y-axis labels */}
+                {[1, 2, 3, 4, 5].map((value) => {
+                  const y = chartPadding.top + chartInnerHeight - ((value - 1) / 4) * chartInnerHeight;
+                  return (
+                    <SvgText
+                      key={value}
+                      x={chartPadding.left - 8}
+                      y={y + 4}
+                      fontSize={11}
+                      fill={colors.muted}
+                      textAnchor="end"
+                    >
+                      {value}
+                    </SvgText>
+                  );
+                })}
+              </Svg>
+
+              {/* X-axis labels (rendered outside SVG for better text rendering) */}
               <View
                 style={[
                   styles.xAxisLabels,
                   {
                     left: chartPadding.left,
-                    bottom: 0,
+                    bottom: 5,
                     width: chartInnerWidth,
                   },
                 ]}
               >
                 {stats.labels.map((label, index) => {
-                  // Show fewer labels for month/year view
-                  const showLabel =
-                    timeRange === "week" ||
-                    (timeRange === "month" && index % 5 === 0) ||
-                    (timeRange === "year" && index % 2 === 0);
+                  const interval = getLabelInterval();
+                  const showLabel = index % interval === 0 || index === stats.labels.length - 1;
+                  const x = (index / (stats.labels.length - 1)) * chartInnerWidth;
                   
-                  return (
+                  return showLabel ? (
                     <Text
                       key={index}
-                      className="text-muted text-xs"
-                      style={{
-                        position: "absolute",
-                        left: (index / (stats.labels.length - 1)) * chartInnerWidth - 10,
-                        width: 20,
-                        textAlign: "center",
-                      }}
+                      className="text-muted"
+                      style={[
+                        styles.xLabel,
+                        { left: x - 20 },
+                      ]}
                     >
-                      {showLabel ? label : ""}
+                      {label}
                     </Text>
-                  );
+                  ) : null;
                 })}
               </View>
             </View>
@@ -369,12 +523,27 @@ export default function StatsScreen() {
         {/* Energy Legend */}
         <View className="mt-4 bg-surface rounded-xl p-4">
           <Text className="text-sm text-muted mb-2">精力评分说明</Text>
-          <View className="flex-row flex-wrap">
-            <Text className="text-foreground text-sm mr-4">1 = 低能</Text>
-            <Text className="text-foreground text-sm mr-4">2 = 疲惫</Text>
-            <Text className="text-foreground text-sm mr-4">3 = 平稳</Text>
-            <Text className="text-foreground text-sm mr-4">4 = 高能</Text>
-            <Text className="text-foreground text-sm">5 = 心流</Text>
+          <View className="flex-row flex-wrap gap-2">
+            <View className="flex-row items-center">
+              <View style={[styles.legendDot, { backgroundColor: '#EF4444' }]} />
+              <Text className="text-foreground text-xs">1 低能</Text>
+            </View>
+            <View className="flex-row items-center">
+              <View style={[styles.legendDot, { backgroundColor: '#F97316' }]} />
+              <Text className="text-foreground text-xs">2 疲惫</Text>
+            </View>
+            <View className="flex-row items-center">
+              <View style={[styles.legendDot, { backgroundColor: '#EAB308' }]} />
+              <Text className="text-foreground text-xs">3 平稳</Text>
+            </View>
+            <View className="flex-row items-center">
+              <View style={[styles.legendDot, { backgroundColor: '#22C55E' }]} />
+              <Text className="text-foreground text-xs">4 高能</Text>
+            </View>
+            <View className="flex-row items-center">
+              <View style={[styles.legendDot, { backgroundColor: '#10B981' }]} />
+              <Text className="text-foreground text-xs">5 心流</Text>
+            </View>
           </View>
         </View>
 
@@ -402,38 +571,20 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: "center",
   },
-  yAxisLabels: {
-    position: "absolute",
-    left: 0,
-    width: 25,
-    justifyContent: "space-between",
-    alignItems: "flex-end",
-    paddingRight: 5,
-  },
-  chartArea: {
-    position: "absolute",
-  },
-  gridLine: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    height: 1,
-    opacity: 0.3,
-  },
-  dataPoint: {
-    position: "absolute",
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
-  line: {
-    position: "absolute",
-    height: 2,
-    transformOrigin: "left center",
-  },
   xAxisLabels: {
     position: "absolute",
     height: 20,
-    flexDirection: "row",
+  },
+  xLabel: {
+    position: "absolute",
+    width: 40,
+    textAlign: "center",
+    fontSize: 10,
+  },
+  legendDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 4,
   },
 });
