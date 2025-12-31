@@ -3,7 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 
 
 import { ScreenContainer } from "@/components/screen-container";
 import { ThemedView } from "@/components/themed-view";
-import { IconSymbol } from "@/components/ui/icon-symbol";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { SchemeColors, type ColorScheme } from "@/constants/theme";
 import { useColors } from "@/hooks/use-colors";
 import { useThemeContext } from "@/lib/theme-provider";
@@ -191,7 +191,7 @@ export default function ThemeLabScreen() {
               </Text>
               <View className="mt-3 gap-2">
                 <View className="flex-row items-center gap-2">
-                  <IconSymbol name="house.fill" color={colors.tint} size={20} />
+                  <Ionicons name="home" color={colors.tint} size={20} />
                   <Text className="text-sm text-foreground">
                     Press count: {pressCount}
                   </Text>

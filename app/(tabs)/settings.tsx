@@ -15,7 +15,7 @@ import {
 import * as Haptics from "expo-haptics";
 
 import { ScreenContainer } from "@/components/screen-container";
-import { IconSymbol } from "@/components/ui/icon-symbol";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useStore } from "@/lib/store";
 import { useColors } from "@/hooks/use-colors";
 import { useThemeContext } from "@/lib/theme-provider";
@@ -234,10 +234,10 @@ export default function SettingsScreen() {
               ]}
             >
               <View className="flex-row items-center">
-                <IconSymbol name="trash.fill" size={20} color={colors.error} />
+                <Ionicons name="trash-outline" size={20} color={colors.error} />
                 <Text className="text-error font-medium ml-3">清除全部数据</Text>
               </View>
-              <IconSymbol name="chevron.right" size={20} color={colors.muted} />
+              <Ionicons name="chevron-forward" size={20} color={colors.muted} />
             </Pressable>
           </View>
           <Text className="text-muted text-xs mt-2 px-2">
@@ -263,7 +263,7 @@ export default function SettingsScreen() {
               ]}
             >
               <Text className="text-foreground font-medium">隐私政策</Text>
-              <IconSymbol name="chevron.right" size={20} color={colors.muted} />
+              <Ionicons name="chevron-forward" size={20} color={colors.muted} />
             </Pressable>
           </View>
         </View>
@@ -290,7 +290,7 @@ export default function SettingsScreen() {
             style={[styles.modalContent, { backgroundColor: colors.background }]}
           >
             <View className="items-center mb-4">
-              <IconSymbol name="exclamationmark.triangle" size={48} color={colors.warning} />
+              <Ionicons name="warning-outline" size={48} color={colors.warning} />
             </View>
             <Text className="text-xl font-bold text-foreground text-center mb-2">
               确认清除数据？

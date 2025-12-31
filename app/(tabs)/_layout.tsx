@@ -1,8 +1,6 @@
 import { Tabs } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-
-import { HapticTab } from "@/components/haptic-tab";
-import { IconSymbol } from "@/components/ui/icon-symbol";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { Platform } from "react-native";
 import { useColors } from "@/hooks/use-colors";
 
@@ -16,8 +14,8 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.muted,
         headerShown: false,
-        tabBarButton: HapticTab,
         tabBarStyle: {
           paddingTop: 8,
           paddingBottom: bottomPadding,
@@ -26,41 +24,75 @@ export default function TabLayout() {
           borderTopColor: colors.border,
           borderTopWidth: 0.5,
         },
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: '500',
+        },
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
           title: "今日",
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="sun.max.fill" color={color} />,
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons 
+              size={24} 
+              name={focused ? "today" : "today-outline"} 
+              color={color} 
+            />
+          ),
         }}
       />
       <Tabs.Screen
         name="week"
         options={{
           title: "本周",
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="calendar" color={color} />,
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons 
+              size={24} 
+              name={focused ? "calendar" : "calendar-outline"} 
+              color={color} 
+            />
+          ),
         }}
       />
       <Tabs.Screen
         name="stats"
         options={{
           title: "统计",
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="chart.bar.fill" color={color} />,
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons 
+              size={24} 
+              name={focused ? "stats-chart" : "stats-chart-outline"} 
+              color={color} 
+            />
+          ),
         }}
       />
       <Tabs.Screen
         name="goals"
         options={{
           title: "目标",
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="flag.fill" color={color} />,
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons 
+              size={24} 
+              name={focused ? "flag" : "flag-outline"} 
+              color={color} 
+            />
+          ),
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
           title: "设置",
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="gearshape.fill" color={color} />,
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons 
+              size={24} 
+              name={focused ? "settings" : "settings-outline"} 
+              color={color} 
+            />
+          ),
         }}
       />
     </Tabs>

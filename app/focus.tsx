@@ -23,7 +23,7 @@ import Animated, {
 import Svg, { Circle } from "react-native-svg";
 
 import { ScreenContainer } from "@/components/screen-container";
-import { IconSymbol } from "@/components/ui/icon-symbol";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useStore, getToday } from "@/lib/store";
 import { useColors } from "@/hooks/use-colors";
 import { ENERGY_TAGS, EnergyTag } from "@/lib/types";
@@ -253,7 +253,7 @@ export default function FocusScreen() {
             pressed && { opacity: 0.7, backgroundColor: colors.surface },
           ]}
         >
-          <IconSymbol name="chevron.left" size={28} color={colors.foreground} />
+          <Ionicons name="chevron-back" size={26} color={colors.foreground} />
         </Pressable>
         <Text className="flex-1 text-center text-xl font-semibold text-foreground">
           番茄任务
@@ -411,7 +411,7 @@ export default function FocusScreen() {
               pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
             ]}
           >
-            <IconSymbol name="play.fill" size={28} color="#fff" />
+            <Ionicons name="play" size={26} color="#fff" />
             <Text className="text-white text-lg font-semibold ml-2">开始专注</Text>
           </Pressable>
         )}
@@ -425,7 +425,7 @@ export default function FocusScreen() {
               pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
             ]}
           >
-            <IconSymbol name="stop.fill" size={28} color="#fff" />
+            <Ionicons name="close" size={26} color="#fff" />
             <Text className="text-white text-lg font-semibold ml-2">放弃</Text>
           </Pressable>
         )}

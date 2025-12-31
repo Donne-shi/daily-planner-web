@@ -1,48 +1,55 @@
-// Fallback for using MaterialIcons on Android and web.
+// Modern icon component using Ionicons for a cleaner, more contemporary look
 
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { SymbolWeight, SymbolViewProps } from "expo-symbols";
 import { ComponentProps } from "react";
 import { OpaqueColorValue, type StyleProp, type TextStyle } from "react-native";
 
-type IconMapping = Record<SymbolViewProps["name"], ComponentProps<typeof MaterialIcons>["name"]>;
+type IconMapping = Record<string, ComponentProps<typeof Ionicons>["name"]>;
 type IconSymbolName = keyof typeof MAPPING;
 
 /**
- * Add your SF Symbols to Material Icons mappings here.
+ * Modern icon mappings using Ionicons
+ * Ionicons provides a cleaner, more contemporary design language
  */
-const MAPPING = {
-  // Tab icons
+const MAPPING: IconMapping = {
+  // Tab icons - using outline style for unselected, filled for selected
   "house.fill": "home",
-  "sun.max.fill": "wb-sunny",
-  "calendar": "date-range",
-  "chart.bar.fill": "bar-chart",
+  "sun.max.fill": "today",
+  "calendar": "calendar-outline",
+  "chart.bar.fill": "stats-chart",
   "flag.fill": "flag",
   "gearshape.fill": "settings",
-  // Other icons
-  "paperplane.fill": "send",
-  "chevron.left.forwardslash.chevron.right": "code",
-  "chevron.right": "chevron-right",
-  "chevron.left": "chevron-left",
+  // Navigation icons
+  "chevron.right": "chevron-forward",
+  "chevron.left": "chevron-back",
+  // Action icons
   "plus": "add",
-  "checkmark": "check",
-  "checkmark.circle.fill": "check-circle",
-  "circle": "radio-button-unchecked",
+  "checkmark": "checkmark",
+  "checkmark.circle.fill": "checkmark-circle",
+  "circle": "ellipse-outline",
   "xmark": "close",
-  "timer": "timer",
-  "play.fill": "play-arrow",
+  // Timer/Focus icons
+  "timer": "timer-outline",
+  "play.fill": "play",
   "pause.fill": "pause",
   "stop.fill": "stop",
   "arrow.clockwise": "refresh",
-  "trash.fill": "delete",
-  "pencil": "edit",
-  "doc.on.doc": "content-copy",
-  "info.circle": "info",
-  "exclamationmark.triangle": "warning",
-} as IconMapping;
+  // Task icons
+  "trash.fill": "trash-outline",
+  "pencil": "pencil-outline",
+  "doc.on.doc": "copy-outline",
+  // Info icons
+  "info.circle": "information-circle-outline",
+  "exclamationmark.triangle": "warning-outline",
+  // Additional modern icons
+  "paperplane.fill": "send",
+  "chevron.left.forwardslash.chevron.right": "code-slash",
+};
 
 /**
- * An icon component that uses native SF Symbols on iOS, and Material Icons on Android and web.
+ * A modern icon component using Ionicons
+ * Provides a cleaner, more contemporary look compared to Material Icons
  */
 export function IconSymbol({
   name,
@@ -56,5 +63,6 @@ export function IconSymbol({
   style?: StyleProp<TextStyle>;
   weight?: SymbolWeight;
 }) {
-  return <MaterialIcons color={color} size={size} name={MAPPING[name]} style={style} />;
+  const iconName = MAPPING[name] || "help-circle-outline";
+  return <Ionicons color={color} size={size} name={iconName as any} style={style} />;
 }

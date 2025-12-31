@@ -14,7 +14,7 @@ import * as Clipboard from "expo-clipboard";
 import { Platform } from "react-native";
 
 import { ScreenContainer } from "@/components/screen-container";
-import { IconSymbol } from "@/components/ui/icon-symbol";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useStore, getWeekStartDate, getToday } from "@/lib/store";
 import { useColors } from "@/hooks/use-colors";
 import { TodoTask, PomodoroSession, WeeklyReflection } from "@/lib/types";
@@ -409,7 +409,7 @@ ${top3Tasks.length > 0 ? top3Tasks.map((t, i) => `${i + 1}. ${t.title}`).join("\
                   ]}
                 >
                   {goal.isCompleted && (
-                    <IconSymbol name="checkmark" size={16} color="#fff" />
+                    <Ionicons name="checkmark" size={14} color="#fff" />
                   )}
                 </Pressable>
                 <Text
@@ -423,7 +423,7 @@ ${top3Tasks.length > 0 ? top3Tasks.map((t, i) => `${i + 1}. ${t.title}`).join("\
                   onPress={() => handleDeleteGoal(goal.id)}
                   style={({ pressed }) => [pressed && { opacity: 0.5 }]}
                 >
-                  <IconSymbol name="trash.fill" size={20} color={colors.error} />
+                  <Ionicons name="close" size={18} color={colors.muted} />
                 </Pressable>
               </View>
             ))}
@@ -447,7 +447,7 @@ ${top3Tasks.length > 0 ? top3Tasks.map((t, i) => `${i + 1}. ${t.title}`).join("\
                     pressed && { opacity: 0.8, transform: [{ scale: 0.97 }] },
                   ]}
                 >
-                  <IconSymbol name="plus" size={24} color="#fff" />
+                  <Ionicons name="add" size={22} color="#fff" />
                 </Pressable>
               </View>
             )}
@@ -475,7 +475,7 @@ ${top3Tasks.length > 0 ? top3Tasks.map((t, i) => `${i + 1}. ${t.title}`).join("\
                   pressed && { opacity: 0.7 },
                 ]}
               >
-                <IconSymbol name="chevron.left" size={20} color={colors.foreground} />
+                <Ionicons name="chevron-back" size={20} color={colors.foreground} />
               </Pressable>
               <Pressable
                 onPress={viewMode === "week" ? handleNextWeek : handleNextMonth}
@@ -485,7 +485,7 @@ ${top3Tasks.length > 0 ? top3Tasks.map((t, i) => `${i + 1}. ${t.title}`).join("\
                   pressed && { opacity: 0.7 },
                 ]}
               >
-                <IconSymbol name="chevron.right" size={20} color={colors.foreground} />
+                <Ionicons name="chevron-forward" size={20} color={colors.foreground} />
               </Pressable>
             </View>
           </View>
@@ -603,7 +603,7 @@ ${top3Tasks.length > 0 ? top3Tasks.map((t, i) => `${i + 1}. ${t.title}`).join("\
                 pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
               ]}
             >
-              <IconSymbol name="doc.on.doc" size={20} color="#fff" />
+              <Ionicons name="copy-outline" size={20} color="#fff" />
               <Text className="text-white font-semibold ml-2">生成本周成果</Text>
             </Pressable>
 
@@ -616,10 +616,10 @@ ${top3Tasks.length > 0 ? top3Tasks.map((t, i) => `${i + 1}. ${t.title}`).join("\
                 pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
               ]}
             >
-              <IconSymbol name="pencil" size={20} color={colors.foreground} />
+              <Ionicons name="create-outline" size={20} color={colors.foreground} />
               <Text className="text-foreground font-semibold ml-2">本周反思</Text>
-              <IconSymbol
-                name="chevron.right"
+              <Ionicons
+                name="chevron-forward"
                 size={20}
                 color={colors.muted}
                 style={{ marginLeft: "auto" }}

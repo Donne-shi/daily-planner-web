@@ -13,7 +13,7 @@ import * as Haptics from "expo-haptics";
 import { Platform } from "react-native";
 
 import { ScreenContainer } from "@/components/screen-container";
-import { IconSymbol } from "@/components/ui/icon-symbol";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useStore } from "@/lib/store";
 import { useColors } from "@/hooks/use-colors";
 import { YearGoal } from "@/lib/types";
@@ -182,7 +182,7 @@ export default function GoalsScreen() {
                 pressed && { opacity: 0.8 },
               ]}
             >
-              <IconSymbol name="plus" size={20} color="#fff" />
+              <Ionicons name="add" size={20} color="#fff" />
               <Text className="text-white font-medium ml-1">添加</Text>
             </Pressable>
           </View>
@@ -212,7 +212,7 @@ export default function GoalsScreen() {
                     ]}
                   >
                     {goal.isCompleted && (
-                      <IconSymbol name="checkmark" size={16} color="#fff" />
+                      <Ionicons name="checkmark" size={14} color="#fff" />
                     )}
                   </Pressable>
                   <View className="flex-1 ml-3">
@@ -261,7 +261,7 @@ export default function GoalsScreen() {
                         pressed && { opacity: 0.5 },
                       ]}
                     >
-                      <IconSymbol name="pencil" size={18} color={colors.muted} />
+                      <Ionicons name="create-outline" size={18} color={colors.muted} />
                     </Pressable>
                     <Pressable
                       onPress={() => handleDeleteGoal(goal.id)}
@@ -270,7 +270,7 @@ export default function GoalsScreen() {
                         pressed && { opacity: 0.5 },
                       ]}
                     >
-                      <IconSymbol name="trash.fill" size={18} color={colors.error} />
+                      <Ionicons name="trash-outline" size={18} color={colors.error} />
                     </Pressable>
                   </View>
                 </View>
