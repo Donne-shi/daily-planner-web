@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import {
   ScrollView,
   Text,
@@ -23,6 +23,9 @@ export default function TodayScreen() {
   const router = useRouter();
   const { state, addTask, toggleTask, deleteTask, getTodayTasks, getTodaySessions } = useStore();
   const [newTaskTitle, setNewTaskTitle] = useState("");
+  const [editingSlotIndex, setEditingSlotIndex] = useState<number | null>(null);
+  const [slotInputValue, setSlotInputValue] = useState("");
+  const inputRef = useRef<TextInput>(null);
 
   const todayTasks = useMemo(() => getTodayTasks(), [state.tasks]);
   const todaySessions = useMemo(() => getTodaySessions(), [state.sessions]);
@@ -37,17 +40,10 @@ export default function TodayScreen() {
     };
   }, [todaySessions]);
 
-  // Separate Top3 and other tasks
-  const { top3Tasks, otherTasks } = useMemo(() => {
-    const top3 = todayTasks.filter((t) => t.isTop3);
-    const others = todayTasks.filter((t) => !t.isTop3);
-    return { top3Tasks: top3, otherTasks: others };
-  }, [todayTasks]);
+  // All tasks for today (no longer separate Top3)
+  const allTasks = todayTasks;
 
-  // Empty slots for Top3
-  const emptyTop3Slots = Math.max(0, 3 - top3Tasks.length);
-
-  const handleAddTask = (isTop3: boolean) => {
+  const handleAddTask = () => {
     if (!newTaskTitle.trim()) return;
     
     if (Platform.OS !== "web") {
@@ -57,11 +53,40 @@ export default function TodayScreen() {
     addTask({
       title: newTaskTitle.trim(),
       isCompleted: false,
-      isTop3,
+      isTop3: false,
       completedAt: null,
       date: getToday(),
     });
     setNewTaskTitle("");
+  };
+
+  const handleAddTaskFromSlot = (index: number) => {
+    if (!slotInputValue.trim()) {
+      setEditingSlotIndex(null);
+      return;
+    }
+    
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    
+    addTask({
+      title: slotInputValue.trim(),
+      isCompleted: false,
+      isTop3: false,
+      completedAt: null,
+      date: getToday(),
+    });
+    setSlotInputValue("");
+    setEditingSlotIndex(null);
+  };
+
+  const handleSlotPress = (index: number) => {
+    if (Platform.OS !== "web") {
+      Haptics.selectionAsync();
+    }
+    setEditingSlotIndex(index);
+    setSlotInputValue("");
   };
 
   const handleToggleTask = (taskId: string) => {
@@ -119,11 +144,6 @@ export default function TodayScreen() {
       >
         {task.title}
       </Text>
-      {task.isTop3 && (
-        <View className="bg-primary/20 px-2 py-1 rounded-full mr-2">
-          <Text className="text-primary text-xs font-medium">Top3</Text>
-        </View>
-      )}
       <Pressable
         onPress={() => handleDeleteTask(task.id)}
         style={({ pressed }) => [pressed && { opacity: 0.5 }]}
@@ -133,17 +153,64 @@ export default function TodayScreen() {
     </View>
   );
 
-  const renderEmptySlot = (index: number) => (
-    <View
-      key={`empty-${index}`}
-      className="flex-row items-center bg-surface/50 rounded-xl px-4 py-3 mb-2 border border-dashed border-border"
-    >
-      <View style={[styles.checkbox, { borderColor: colors.border }]} />
-      <Text className="flex-1 ml-3 text-base text-muted">
-        添加第 {top3Tasks.length + index + 1} 件重要事项
-      </Text>
-    </View>
-  );
+  const renderEmptySlot = (index: number) => {
+    const isEditing = editingSlotIndex === index;
+    
+    if (isEditing) {
+      return (
+        <View
+          key={`empty-${index}`}
+          className="flex-row items-center bg-surface rounded-xl px-4 py-3 mb-2"
+        >
+          <View style={[styles.checkbox, { borderColor: colors.border }]} />
+          <TextInput
+            ref={inputRef}
+            className="flex-1 ml-3 text-base text-foreground"
+            placeholder={`输入第 ${allTasks.length + index + 1} 件事项`}
+            placeholderTextColor={colors.muted}
+            value={slotInputValue}
+            onChangeText={setSlotInputValue}
+            autoFocus
+            returnKeyType="done"
+            onSubmitEditing={() => handleAddTaskFromSlot(index)}
+            onBlur={() => {
+              if (!slotInputValue.trim()) {
+                setEditingSlotIndex(null);
+              }
+            }}
+          />
+          <Pressable
+            onPress={() => handleAddTaskFromSlot(index)}
+            style={({ pressed }) => [
+              styles.slotConfirmButton,
+              { backgroundColor: colors.primary },
+              pressed && { opacity: 0.8 },
+            ]}
+          >
+            <IconSymbol name="checkmark" size={18} color="#fff" />
+          </Pressable>
+        </View>
+      );
+    }
+    
+    return (
+      <Pressable
+        key={`empty-${index}`}
+        onPress={() => handleSlotPress(index)}
+        style={({ pressed }) => [pressed && { opacity: 0.7 }]}
+      >
+        <View className="flex-row items-center bg-surface/50 rounded-xl px-4 py-3 mb-2 border border-dashed border-border">
+          <View style={[styles.checkbox, { borderColor: colors.border }]} />
+          <Text className="flex-1 ml-3 text-base text-muted">
+            添加第 {allTasks.length + index + 1} 件事项
+          </Text>
+        </View>
+      </Pressable>
+    );
+  };
+
+  // Calculate empty slots (show 3 empty slots if less than 3 tasks)
+  const emptySlotCount = Math.max(0, 3 - allTasks.length);
 
   return (
     <ScreenContainer className="flex-1">
@@ -164,72 +231,37 @@ export default function TodayScreen() {
           </Text>
         </View>
 
-        {/* Top 3 Tasks Section */}
+        {/* Today's Tasks Section */}
         <View className="mb-6">
           <Text className="text-lg font-semibold text-foreground mb-3">
-            🎯 最重要的三件事
+            📋 今日待办事项
           </Text>
-          {top3Tasks.map(renderTaskItem)}
-          {Array.from({ length: emptyTop3Slots }).map((_, i) => renderEmptySlot(i))}
+          {allTasks.map(renderTaskItem)}
+          {Array.from({ length: emptySlotCount }).map((_, i) => renderEmptySlot(i))}
           
-          {/* Add Top3 Task Input */}
-          {top3Tasks.length < 3 && (
-            <View className="flex-row items-center mt-2">
-              <TextInput
-                className="flex-1 bg-surface rounded-xl px-4 py-3 text-foreground"
-                placeholder="添加重要任务..."
-                placeholderTextColor={colors.muted}
-                value={newTaskTitle}
-                onChangeText={setNewTaskTitle}
-                returnKeyType="done"
-                onSubmitEditing={() => handleAddTask(true)}
-              />
-              <Pressable
-                onPress={() => handleAddTask(true)}
-                style={({ pressed }) => [
-                  styles.addButton,
-                  { backgroundColor: colors.primary },
-                  pressed && { opacity: 0.8, transform: [{ scale: 0.97 }] },
-                ]}
-              >
-                <IconSymbol name="plus" size={24} color="#fff" />
-              </Pressable>
-            </View>
-          )}
-        </View>
-
-        {/* Other Tasks Section */}
-        {(otherTasks.length > 0 || top3Tasks.length >= 3) && (
-          <View className="mb-6">
-            <Text className="text-lg font-semibold text-foreground mb-3">
-              📋 其他任务
-            </Text>
-            {otherTasks.map(renderTaskItem)}
-            
-            {/* Add Other Task Input */}
-            <View className="flex-row items-center mt-2">
-              <TextInput
-                className="flex-1 bg-surface rounded-xl px-4 py-3 text-foreground"
-                placeholder="添加其他任务..."
-                placeholderTextColor={colors.muted}
-                value={newTaskTitle}
-                onChangeText={setNewTaskTitle}
-                returnKeyType="done"
-                onSubmitEditing={() => handleAddTask(false)}
-              />
-              <Pressable
-                onPress={() => handleAddTask(false)}
-                style={({ pressed }) => [
-                  styles.addButton,
-                  { backgroundColor: colors.primary },
-                  pressed && { opacity: 0.8, transform: [{ scale: 0.97 }] },
-                ]}
-              >
-                <IconSymbol name="plus" size={24} color="#fff" />
-              </Pressable>
-            </View>
+          {/* Add Task Input */}
+          <View className="flex-row items-center mt-2">
+            <TextInput
+              className="flex-1 bg-surface rounded-xl px-4 py-3 text-foreground"
+              placeholder="添加任务，点击对勾"
+              placeholderTextColor={colors.muted}
+              value={newTaskTitle}
+              onChangeText={setNewTaskTitle}
+              returnKeyType="done"
+              onSubmitEditing={handleAddTask}
+            />
+            <Pressable
+              onPress={handleAddTask}
+              style={({ pressed }) => [
+                styles.addButton,
+                { backgroundColor: colors.primary },
+                pressed && { opacity: 0.8, transform: [{ scale: 0.97 }] },
+              ]}
+            >
+              <IconSymbol name="checkmark" size={24} color="#fff" />
+            </Pressable>
           </View>
-        )}
+        </View>
 
         {/* Pomodoro Entry */}
         <Pressable
@@ -273,14 +305,14 @@ export default function TodayScreen() {
         </View>
 
         {/* Empty State */}
-        {todayTasks.length === 0 && todayStats.pomodoroCount === 0 && (
+        {allTasks.length === 0 && todayStats.pomodoroCount === 0 && (
           <View className="items-center py-8">
             <Text className="text-6xl mb-4">🌟</Text>
             <Text className="text-foreground text-lg font-medium">
               新的一天，新的开始
             </Text>
             <Text className="text-muted text-center mt-2">
-              添加你今天最重要的三件事{"\n"}开始高效的一天
+              点击上方空白项添加任务{"\n"}开始高效的一天
             </Text>
           </View>
         )}
@@ -305,6 +337,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginLeft: 8,
+  },
+  slotConfirmButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
   },
   pomodoroCard: {
     borderRadius: 16,
