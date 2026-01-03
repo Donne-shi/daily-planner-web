@@ -32,6 +32,8 @@ export default function SettingsScreen() {
   const { colorScheme, setColorScheme } = useThemeContext();
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
+  const [showAboutDeveloper, setShowAboutDeveloper] = useState(false);
   const [tempUserName, setTempUserName] = useState(state.settings.userName || "");
   const [tempUserAvatar, setTempUserAvatar] = useState(state.settings.userAvatar || "");
 
@@ -114,11 +116,25 @@ export default function SettingsScreen() {
   };
 
   const handlePrivacyPolicy = () => {
-    // In a real app, this would link to your privacy policy
     if (Platform.OS !== "web") {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
-    Alert.alert("隐私政策", "我们重视您的隐私。所有数据均存储在本地设备上，不会上传到服务器。");
+    setShowPrivacyPolicy(true);
+  };
+
+  const handleAboutDeveloper = () => {
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    setShowAboutDeveloper(true);
+  };
+
+  const handleContactDeveloper = async () => {
+    const url = "https://bigtree.lovable.app/";
+    const canOpen = await Linking.canOpenURL(url);
+    if (canOpen) {
+      await Linking.openURL(url);
+    }
   };
 
   if (state.isLoading) {
@@ -370,6 +386,16 @@ export default function SettingsScreen() {
               <Text className="text-muted">{APP_VERSION}</Text>
             </View>
             <Pressable
+              onPress={handleAboutDeveloper}
+              style={({ pressed }) => [
+                styles.menuItem,
+                pressed && { opacity: 0.7 },
+              ]}
+            >
+              <Text className="text-foreground font-medium">开发者</Text>
+              <Ionicons name="chevron-forward" size={20} color={colors.muted} />
+            </Pressable>
+            <Pressable
               onPress={handlePrivacyPolicy}
               style={({ pressed }) => [
                 styles.menuItem,
@@ -537,6 +563,132 @@ export default function SettingsScreen() {
                 <Text className="text-white font-semibold">保存</Text>
               </Pressable>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Privacy Policy Modal */}
+      <Modal
+        visible={showPrivacyPolicy}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowPrivacyPolicy(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View
+            style={[styles.modalContent, { backgroundColor: colors.background, maxHeight: "80%" }]}
+          >
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <Text className="text-2xl font-bold text-foreground mb-4">
+                隐私政策
+              </Text>
+              
+              <Text className="text-base font-semibold text-foreground mb-2">
+                数据保护
+              </Text>
+              <Text className="text-muted text-sm mb-4 leading-relaxed">
+                我们重视您的隐私。本应用所有数据均存储在您的本地设备上，不会上传到任何服务器或与第三方共享。
+              </Text>
+
+              <Text className="text-base font-semibold text-foreground mb-2">
+                数据使用
+              </Text>
+              <Text className="text-muted text-sm mb-4 leading-relaxed">
+                您的任务、番茄记录、目标和个人信息仅用于本应用的功能实现，帮助您更好地管理时间和提升效能。
+              </Text>
+
+              <Text className="text-base font-semibold text-foreground mb-2">
+                数据删除
+              </Text>
+              <Text className="text-muted text-sm mb-4 leading-relaxed">
+                您可以随时在设置中清除所有数据。清除后，所有信息将从您的设备中永久删除。
+              </Text>
+
+              <Text className="text-base font-semibold text-foreground mb-2">
+                第三方服务
+              </Text>
+              <Text className="text-muted text-sm mb-6 leading-relaxed">
+                本应用不使用任何第三方分析或追踪服务。您的使用数据完全私密。
+              </Text>
+            </ScrollView>
+            
+            <Pressable
+              onPress={() => setShowPrivacyPolicy(false)}
+              style={({ pressed }) => [
+                styles.modalButton,
+                { backgroundColor: colors.primary, marginTop: 16 },
+                pressed && { opacity: 0.8 },
+              ]}
+            >
+              <Text className="text-white font-semibold">我已了解</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+
+      {/* About Developer Modal */}
+      <Modal
+        visible={showAboutDeveloper}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowAboutDeveloper(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View
+            style={[styles.modalContent, { backgroundColor: colors.background, maxHeight: "80%" }]}
+          >
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <View className="items-center mb-6">
+                <Image
+                  source={require("@/assets/images/dashu-avatar.jpg")}
+                  style={{ width: 100, height: 100, borderRadius: 50, marginBottom: 16 }}
+                />
+                <Text className="text-2xl font-bold text-foreground mb-2">
+                  大树老师
+                </Text>
+                <Text className="text-primary font-semibold text-center">
+                  时间管理与学习效能专家
+                </Text>
+              </View>
+
+              <Text className="text-muted text-sm mb-6 leading-relaxed text-center">
+                致力于帮助青少年、家庭和企业获得卓越的效能表现。通过科学的时间管理方法和工具，助力每个人实现更高效的学习和工作。
+              </Text>
+
+              <View className="items-center mb-6">
+                <Text className="text-foreground font-semibold mb-3">
+                  扫描二维码联系大树老师
+                </Text>
+                <Image
+                  source={require("@/assets/images/dashu-qrcode.jpg")}
+                  style={{ width: 180, height: 180, borderRadius: 12 }}
+                />
+              </View>
+
+              <Pressable
+                onPress={handleContactDeveloper}
+                style={({ pressed }) => [
+                  styles.modalButton,
+                  { backgroundColor: colors.primary, marginBottom: 12 },
+                  pressed && { opacity: 0.8 },
+                ]}
+              >
+                <Text className="text-white font-semibold">
+                  访问大树老师官网
+                </Text>
+              </Pressable>
+            </ScrollView>
+            
+            <Pressable
+              onPress={() => setShowAboutDeveloper(false)}
+              style={({ pressed }) => [
+                styles.modalButton,
+                { backgroundColor: colors.surface },
+                pressed && { opacity: 0.8 },
+              ]}
+            >
+              <Text className="text-foreground font-semibold">关闭</Text>
+            </Pressable>
           </View>
         </View>
       </Modal>
