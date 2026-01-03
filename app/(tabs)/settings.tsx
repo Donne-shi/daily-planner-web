@@ -18,6 +18,7 @@ import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
 
 import { ScreenContainer } from "@/components/screen-container";
+import { FeatherIcon } from "@/components/feather-icon";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useStore } from "@/lib/store";
 import { useColors } from "@/hooks/use-colors";
@@ -332,9 +333,12 @@ export default function SettingsScreen() {
 
         {/* Data Management */}
         <View className="mb-6">
-          <Text className="text-lg font-semibold text-foreground mb-3">
-            💾 数据管理
-          </Text>
+          <View className="flex-row items-center mb-3">
+            <FeatherIcon name="save" size={20} color={colors.foreground} style={{ marginRight: 8 }} />
+            <Text className="text-lg font-semibold text-foreground">
+              数据管理
+            </Text>
+          </View>
           <View className="bg-surface rounded-2xl overflow-hidden">
             <Pressable
               onPress={handleClearData}

@@ -14,6 +14,7 @@ import * as Haptics from "expo-haptics";
 import Svg, { Path, Circle, Line, Defs, LinearGradient, Stop, Text as SvgText } from "react-native-svg";
 
 import { ScreenContainer } from "@/components/screen-container";
+import { FeatherIcon } from "@/components/feather-icon";
 import { useStore, getWeekStartDate, getToday } from "@/lib/store";
 import { useColors } from "@/hooks/use-colors";
 import { PomodoroSession } from "@/lib/types";
@@ -366,14 +367,14 @@ export default function StatsScreen() {
             <Text className="text-muted text-sm mt-1">番茄次数</Text>
           </View>
           <View className="flex-1 bg-surface rounded-2xl p-4 items-center">
-            <Text className="text-4xl mb-2">⏱️</Text>
+            <FeatherIcon name="clock" size={32} color={colors.primary} style={{ marginBottom: 8 }} />
             <Text className="text-3xl font-bold text-primary">
               {stats.focusMinutes}
             </Text>
             <Text className="text-muted text-sm mt-1">专注分钟</Text>
           </View>
           <View className="flex-1 bg-surface rounded-2xl p-4 items-center">
-            <Text className="text-4xl mb-2">✅</Text>
+            <FeatherIcon name="check" size={32} color={colors.primary} style={{ marginBottom: 8 }} />
             <Text className="text-3xl font-bold text-primary">
               {stats.completedTasks}
             </Text>

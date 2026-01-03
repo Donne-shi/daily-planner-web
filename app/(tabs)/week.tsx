@@ -18,6 +18,7 @@ import * as Sharing from "expo-sharing";
 import ViewShot from "react-native-view-shot";
 
 import { ScreenContainer } from "@/components/screen-container";
+import { FeatherIcon } from "@/components/feather-icon";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useStore, getWeekStartDate, getToday } from "@/lib/store";
 import { useColors } from "@/hooks/use-colors";
@@ -304,7 +305,7 @@ export default function WeekScreen() {
       .filter((t) => t.isTop3 && t.isCompleted && weekDays.includes(t.date))
       .slice(0, 3);
 
-    return `📊 本周成果总结
+    return `本周成果总结
 
 ✅ 完成任务: ${weekStats.taskCount} 项
 🍏 番茄次数: ${weekStats.pomodoroCount} 个
@@ -476,9 +477,12 @@ ${top3Tasks.length > 0 ? top3Tasks.map((t, i) => `${i + 1}. ${t.title}`).join("\
         {/* Weekly Goals - Only show in week view */}
         {viewMode === "week" && (
           <View className="mb-6">
-            <Text className="text-lg font-semibold text-foreground mb-3">
-              🎯 本周核心目标
-            </Text>
+            <View className="flex-row items-center mb-3">
+              <FeatherIcon name="target" size={20} color={colors.foreground} style={{ marginRight: 8 }} />
+              <Text className="text-lg font-semibold text-foreground">
+                本周核心目标
+              </Text>
+            </View>
             {weeklyGoals.map((goal) => (
               <View
                 key={goal.id}
@@ -711,7 +715,10 @@ ${top3Tasks.length > 0 ? top3Tasks.map((t, i) => `${i + 1}. ${t.title}`).join("\
                     {/* Completed Tasks */}
                     {tasks.length > 0 && (
                       <View className="mt-3 pt-3 border-t border-border">
-                        <Text className="text-sm font-medium text-foreground mb-2">✅ 完成的任务</Text>
+                        <View className="flex-row items-center mb-2">
+                          <FeatherIcon name="check" size={16} color={colors.foreground} style={{ marginRight: 6 }} />
+                          <Text className="text-sm font-medium text-foreground">完成的任务</Text>
+                        </View>
                         {tasks.map((task) => (
                           <Text key={task.id} className="text-muted text-sm mb-1">
                             • {task.title}
@@ -830,14 +837,20 @@ ${top3Tasks.length > 0 ? top3Tasks.map((t, i) => `${i + 1}. ${t.title}`).join("\
             ]}
           >
             <ScrollView showsVerticalScrollIndicator={false}>
-              <Text className="text-xl font-bold text-foreground mb-4">
-                📝 本周反思
-              </Text>
+              <View className="flex-row items-center mb-4">
+                <FeatherIcon name="edit-3" size={20} color={colors.foreground} style={{ marginRight: 8 }} />
+                <Text className="text-xl font-bold text-foreground">
+                  本周反思
+                </Text>
+              </View>
 
               {/* Top 3 Achievements */}
-              <Text className="text-base font-semibold text-foreground mb-2">
-                🏆 本周三大成就
-              </Text>
+              <View className="flex-row items-center mb-2">
+                <FeatherIcon name="trophy" size={18} color={colors.foreground} style={{ marginRight: 8 }} />
+                <Text className="text-base font-semibold text-foreground">
+                  本周三大成就
+                </Text>
+              </View>
               {reflectionForm.top3Achievements.map((item, index) => (
                 <TextInput
                   key={`achievement-${index}`}

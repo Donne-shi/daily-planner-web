@@ -13,6 +13,7 @@ import * as Haptics from "expo-haptics";
 import { Platform } from "react-native";
 
 import { ScreenContainer } from "@/components/screen-container";
+import { FeatherIcon } from "@/components/feather-icon";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useStore } from "@/lib/store";
 import { useColors } from "@/hooks/use-colors";
@@ -136,9 +137,12 @@ export default function GoalsScreen() {
 
         {/* Mission */}
         <View className="mb-6">
-          <Text className="text-lg font-semibold text-foreground mb-3">
-            🎯 使命 (Mission)
-          </Text>
+          <View className="flex-row items-center mb-3">
+            <FeatherIcon name="target" size={20} color={colors.foreground} style={{ marginRight: 8 }} />
+            <Text className="text-lg font-semibold text-foreground">
+              使命 (Mission)
+            </Text>
+          </View>
           <TextInput
             className="bg-surface rounded-xl px-4 py-4 text-foreground"
             placeholder="我的人生使命是..."
@@ -153,9 +157,12 @@ export default function GoalsScreen() {
 
         {/* Vision */}
         <View className="mb-6">
-          <Text className="text-lg font-semibold text-foreground mb-3">
-            🔭 愿景 (Vision)
-          </Text>
+          <View className="flex-row items-center mb-3">
+            <FeatherIcon name="eye" size={20} color={colors.foreground} style={{ marginRight: 8 }} />
+            <Text className="text-lg font-semibold text-foreground">
+              愿景 (Vision)
+            </Text>
+          </View>
           <TextInput
             className="bg-surface rounded-xl px-4 py-4 text-foreground"
             placeholder="我希望成为..."
@@ -171,9 +178,12 @@ export default function GoalsScreen() {
         {/* Year Goals */}
         <View className="mb-6">
           <View className="flex-row items-center justify-between mb-3">
-            <Text className="text-lg font-semibold text-foreground">
-              🏆 年目标
-            </Text>
+            <View className="flex-row items-center">
+              <FeatherIcon name="trophy" size={20} color={colors.foreground} style={{ marginRight: 8 }} />
+              <Text className="text-lg font-semibold text-foreground">
+                年目标
+              </Text>
+            </View>
             <Pressable
               onPress={() => setShowAddGoal(true)}
               style={({ pressed }) => [
@@ -189,7 +199,7 @@ export default function GoalsScreen() {
 
           {yearGoals.length === 0 ? (
             <View className="items-center py-8 bg-surface/50 rounded-xl">
-              <Text className="text-4xl mb-2">🎯</Text>
+              <FeatherIcon name="target" size={48} color={colors.muted} style={{ marginBottom: 8 }} />
               <Text className="text-muted">暂无年目标</Text>
               <Text className="text-muted text-sm mt-1">
                 点击上方按钮添加你的年度目标
