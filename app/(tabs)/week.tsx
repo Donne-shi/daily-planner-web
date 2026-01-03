@@ -672,7 +672,7 @@ ${top3Tasks.length > 0 ? top3Tasks.map((t, i) => `${i + 1}. ${t.title}`).join("\
                     </View>
 
                     {/* Hourly Timeline */}
-                    {sortedHours.length > 0 && (
+                    {sessions.length > 0 && (
                       <View className="mt-2 pt-3 border-t border-border">
                         <View className="flex-row items-center mb-3">
                           <RNImage
@@ -681,26 +681,26 @@ ${top3Tasks.length > 0 ? top3Tasks.map((t, i) => `${i + 1}. ${t.title}`).join("\
                           />
                           <Text className="text-sm font-medium text-foreground">番茄时间分布</Text>
                         </View>
-                        {sortedHours.map((hour) => (
-                          <View key={hour} className="flex-row items-center mb-2">
-                            <Text className="text-muted text-sm w-12">
-                              {String(hour).padStart(2, '0')}:00
-                            </Text>
-                            <View className="flex-1 flex-row flex-wrap ml-2">
-                              {sessionsByHour[hour].map((s, i) => (
-                                <View
-                                  key={s.id}
-                                  className="rounded-full px-2 py-1 mr-1 mb-1"
-                                  style={{ backgroundColor: colors.primary + '20' }}
-                                >
-                                  <Text className="text-xs" style={{ color: colors.primary }}>
-                                    {s.durationMinutes}分钟 {s.energyScore ? `· 精力${s.energyScore}` : ''}
-                                  </Text>
-                                </View>
-                              ))}
+                        {sessions.map((s) => {
+                          const startTime = new Date(s.startAt);
+                          const endTime = new Date(s.endAt);
+                          const startHour = String(startTime.getHours()).padStart(2, '0');
+                          const startMin = String(startTime.getMinutes()).padStart(2, '0');
+                          const endHour = String(endTime.getHours()).padStart(2, '0');
+                          const endMin = String(endTime.getMinutes()).padStart(2, '0');
+                          const timeRange = `${startHour}:${startMin}-${endHour}:${endMin}`;
+                          return (
+                            <View
+                              key={s.id}
+                              className="rounded-lg px-3 py-2 mr-1 mb-2"
+                              style={{ backgroundColor: colors.primary + '15' }}
+                            >
+                              <Text className="text-xs" style={{ color: colors.primary }}>
+                                {timeRange}  {s.durationMinutes}分钟 {s.energyScore ? `精力${s.energyScore}` : ''}
+                              </Text>
                             </View>
-                          </View>
-                        ))}
+                          );
+                        })}
                       </View>
                     )}
 
