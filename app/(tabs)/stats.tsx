@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   StyleSheet,
   Dimensions,
+  Image,
 } from "react-native";
 import { Platform } from "react-native";
 import * as Haptics from "expo-haptics";
@@ -333,7 +334,10 @@ export default function StatsScreen() {
         {/* Stats Cards */}
         <View className="flex-row gap-4 mb-6">
           <View className="flex-1 bg-surface rounded-2xl p-4 items-center">
-            <Text className="text-4xl mb-2">🍅</Text>
+            <Image
+              source={require("@/assets/images/icon.png")}
+              style={{ width: 48, height: 48, marginBottom: 8, borderRadius: 12 }}
+            />
             <Text className="text-3xl font-bold text-primary">
               {stats.pomodoroCount}
             </Text>

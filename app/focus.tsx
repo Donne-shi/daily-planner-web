@@ -1,4 +1,3 @@
-import { useState, useEffect, useRef, useCallback } from "react";
 import {
   View,
   Text,
@@ -22,12 +21,14 @@ import Animated, {
   interpolate,
 } from "react-native-reanimated";
 import Svg, { Circle } from "react-native-svg";
+import { useRef, useState, useEffect, useCallback } from "react";
 
 import { ScreenContainer } from "@/components/screen-container";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useStore, getToday } from "@/lib/store";
 import { useColors } from "@/hooks/use-colors";
 import { ENERGY_TAGS, EnergyTag } from "@/lib/types";
+import { Image } from "react-native";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const CIRCLE_SIZE = Math.min(SCREEN_WIDTH * 0.8, 320);
@@ -43,43 +44,40 @@ const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 type TimerStatus = "idle" | "running";
 
-// Simple beep sound using Web Audio API for web, or a placeholder for native
+// Play completion sound with multiple beeps
 const playCompletionSound = () => {
   if (Platform.OS === "web") {
     try {
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
       
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
+      // Play three beeps with increasing frequency
+      const beeps = [
+        { frequency: 800, delay: 0 },
+        { frequency: 1000, delay: 200 },
+        { frequency: 1200, delay: 400 },
+      ];
       
-      oscillator.frequency.value = 800;
-      oscillator.type = "sine";
-      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
-      
-      oscillator.start(audioContext.currentTime);
-      oscillator.stop(audioContext.currentTime + 0.5);
-      
-      // Play a second beep
-      setTimeout(() => {
-        const osc2 = audioContext.createOscillator();
-        const gain2 = audioContext.createGain();
-        osc2.connect(gain2);
-        gain2.connect(audioContext.destination);
-        osc2.frequency.value = 1000;
-        osc2.type = "sine";
-        gain2.gain.setValueAtTime(0.3, audioContext.currentTime);
-        gain2.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
-        osc2.start(audioContext.currentTime);
-        osc2.stop(audioContext.currentTime + 0.5);
-      }, 200);
+      beeps.forEach(({ frequency, delay }) => {
+        setTimeout(() => {
+          const oscillator = audioContext.createOscillator();
+          const gainNode = audioContext.createGain();
+          
+          oscillator.connect(gainNode);
+          gainNode.connect(audioContext.destination);
+          
+          oscillator.frequency.value = frequency;
+          oscillator.type = "sine";
+          gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+          
+          oscillator.start(audioContext.currentTime);
+          oscillator.stop(audioContext.currentTime + 0.3);
+        }, delay);
+      });
     } catch (e) {
       console.log("Audio not supported");
     }
   }
-  // For native, the haptic feedback is the primary notification
 };
 
 export default function FocusScreen() {
@@ -172,6 +170,7 @@ export default function FocusScreen() {
     
     // Vibration feedback based on settings
     if (Platform.OS !== "web" && state.settings.vibrationEnabled) {
+      // Play success haptic feedback
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
     
@@ -344,7 +343,15 @@ export default function FocusScreen() {
           
           {/* Center content */}
           <View style={styles.centerContent}>
-            <Text style={{ fontSize: status === "running" ? 72 : 48, marginBottom: 8 }}>🍅</Text>
+            <Image
+              source={require("@/assets/images/icon.png")}
+              style={{
+                width: status === "running" ? 72 : 48,
+                height: status === "running" ? 72 : 48,
+                marginBottom: 8,
+                borderRadius: status === "running" ? 18 : 12,
+              }}
+            />
             <Text
               className="font-bold text-foreground"
               style={{ 
@@ -499,68 +506,38 @@ export default function FocusScreen() {
               这段专注的精力状态如何？
             </Text>
 
-            {/* Energy Score */}
-            <View className="flex-row justify-center mb-4">
-              {[1, 2, 3, 4, 5].map((score) => (
-                <Pressable
-                  key={score}
-                  onPress={() => {
-                    setEnergyScore(score);
-                    if (Platform.OS !== "web") {
-                      Haptics.selectionAsync();
-                    }
-                  }}
-                  style={({ pressed }) => [
-                    styles.scoreButton,
-                    {
-                      backgroundColor:
-                        energyScore === score ? colors.primary : colors.surface,
-                    },
-                    pressed && { opacity: 0.8 },
-                  ]}
-                >
-                  <Text
-                    className={`text-lg font-bold ${
-                      energyScore === score ? "text-white" : "text-foreground"
-                    }`}
+            {/* Energy Score - 1-5 Rating */}
+            <View className="mb-8">
+              <View className="flex-row justify-center gap-3 mb-3">
+                {[1, 2, 3, 4, 5].map((score) => (
+                  <Pressable
+                    key={score}
+                    onPress={() => {
+                      setEnergyScore(score);
+                      if (Platform.OS !== "web") {
+                        Haptics.selectionAsync();
+                      }
+                    }}
+                    style={({ pressed }) => [
+                      styles.scoreButton,
+                      {
+                        backgroundColor:
+                          energyScore === score ? colors.primary : colors.surface,
+                      },
+                      pressed && { opacity: 0.8 },
+                    ]}
                   >
-                    {score}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-            <Text className="text-muted text-sm mb-4">1=低 → 5=高</Text>
-
-            {/* Energy Tags */}
-            <View className="flex-row flex-wrap justify-center mb-6">
-              {ENERGY_TAGS.map((tag) => (
-                <Pressable
-                  key={tag}
-                  onPress={() => {
-                    setEnergyTag(energyTag === tag ? null : tag);
-                    if (Platform.OS !== "web") {
-                      Haptics.selectionAsync();
-                    }
-                  }}
-                  style={({ pressed }) => [
-                    styles.tagButton,
-                    {
-                      backgroundColor:
-                        energyTag === tag ? colors.primary : colors.surface,
-                      borderColor: colors.border,
-                    },
-                    pressed && { opacity: 0.8 },
-                  ]}
-                >
-                  <Text
-                    className={`text-sm ${
-                      energyTag === tag ? "text-white" : "text-foreground"
-                    }`}
-                  >
-                    {tag}
-                  </Text>
-                </Pressable>
-              ))}
+                    <Text
+                      className={`text-2xl font-bold ${
+                        energyScore === score ? "text-white" : "text-foreground"
+                      }`}
+                    >
+                      {score}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+              <Text className="text-muted text-xs text-center">1=低能 2=疲惫 3=平稳 4=高能 5=心流</Text>
             </View>
 
             {/* Actions */}

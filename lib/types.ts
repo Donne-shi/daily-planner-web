@@ -58,6 +58,8 @@ export interface AppSettings {
   darkMode: boolean;
   mission?: string;
   vision?: string;
+  userName?: string;
+  userAvatar?: string; // Base64 or image URI
 }
 
 export const ENERGY_TAGS = ['高能', '平稳', '低能', '疲惫', '心流'] as const;

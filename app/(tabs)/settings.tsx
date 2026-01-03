@@ -11,8 +11,11 @@ import {
   Alert,
   Platform,
   Linking,
+  TextInput,
+  Image,
 } from "react-native";
 import * as Haptics from "expo-haptics";
+import * as ImagePicker from "expo-image-picker";
 
 import { ScreenContainer } from "@/components/screen-container";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -27,6 +30,34 @@ export default function SettingsScreen() {
   const { state, updateSettings, clearAllData } = useStore();
   const { colorScheme, setColorScheme } = useThemeContext();
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [tempUserName, setTempUserName] = useState(state.settings.userName || "");
+  const [tempUserAvatar, setTempUserAvatar] = useState(state.settings.userAvatar || "");
+
+  const handlePickImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+      base64: true,
+    });
+
+    if (!result.canceled && result.assets[0].base64) {
+      setTempUserAvatar(`data:image/jpeg;base64,${result.assets[0].base64}`);
+    }
+  };
+
+  const handleSaveProfile = () => {
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    updateSettings({
+      userName: tempUserName,
+      userAvatar: tempUserAvatar,
+    });
+    setShowProfileModal(false);
+  }
 
   const handleDefaultTimeChange = (delta: number) => {
     const newValue = Math.max(5, Math.min(60, state.settings.defaultPomodoroMinutes + delta));
@@ -111,11 +142,71 @@ export default function SettingsScreen() {
           <Text className="text-muted mt-1">自定义你的应用体验</Text>
         </View>
 
+        {/* Profile Section */}
+        <View className="mb-6">
+          <Pressable
+            onPress={() => {
+              setTempUserName(state.settings.userName || "");
+              setTempUserAvatar(state.settings.userAvatar || "");
+              setShowProfileModal(true);
+            }}
+            style={({ pressed }) => [
+              {
+                backgroundColor: colors.surface,
+                borderRadius: 16,
+                padding: 16,
+              },
+              pressed && { opacity: 0.7 },
+            ]}
+          >
+            <View className="flex-row items-center">
+              {state.settings.userAvatar ? (
+                <Image
+                  source={{ uri: state.settings.userAvatar }}
+                  style={{
+                    width: 64,
+                    height: 64,
+                    borderRadius: 32,
+                    marginRight: 16,
+                  }}
+                />
+              ) : (
+                <View
+                  style={{
+                    width: 64,
+                    height: 64,
+                    borderRadius: 32,
+                    backgroundColor: colors.primary,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    marginRight: 16,
+                  }}
+                >
+                  <Ionicons name="person" size={32} color="#fff" />
+                </View>
+              )}
+              <View className="flex-1">
+                <Text className="text-lg font-semibold text-foreground">
+                  {state.settings.userName || "设置个人资料"}
+                </Text>
+                <Text className="text-muted text-sm mt-1">点击编辑头像和名称</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.muted} />
+            </View>
+          </Pressable>
+        </View>
+
         {/* Pomodoro Settings */}
         <View className="mb-6">
-          <Text className="text-lg font-semibold text-foreground mb-3">
-            🍅 番茄设置
-          </Text>
+          <View className="flex-row items-center mb-3">
+            <Image
+              source={require("@/assets/images/icon.png")}
+              style={{ width: 24, height: 24, marginRight: 8, borderRadius: 4 }}
+            />
+            <Text className="text-lg font-semibold text-foreground">
+              番茄设置
+            </Text>
+          </View>
           <View className="bg-surface rounded-2xl overflow-hidden">
             {/* Default Duration */}
             <View className="flex-row items-center justify-between px-4 py-4 border-b border-border">
@@ -289,7 +380,10 @@ export default function SettingsScreen() {
 
         {/* App Info */}
         <View className="items-center py-8">
-          <Text className="text-4xl mb-2">🍅</Text>
+          <Image
+            source={require("@/assets/images/icon.png")}
+            style={{ width: 80, height: 80, marginBottom: 16, borderRadius: 20 }}
+          />
           <Text className="text-foreground font-semibold">时间好管家</Text>
           <Text className="text-muted text-sm mt-1">
             专注效率，成就更好的自己
@@ -342,6 +436,106 @@ export default function SettingsScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Profile Edit Modal */}
+      <Modal
+        visible={showProfileModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowProfileModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View
+            style={[styles.profileModalContent, { backgroundColor: colors.background }]}
+          >
+            <View className="flex-row items-center justify-between mb-6">
+              <Text className="text-xl font-bold text-foreground">编辑个人资料</Text>
+              <Pressable
+                onPress={() => setShowProfileModal(false)}
+                style={({ pressed }) => [pressed && { opacity: 0.7 }]}
+              >
+                <Ionicons name="close" size={24} color={colors.foreground} />
+              </Pressable>
+            </View>
+
+            {/* Avatar */}
+            <View className="items-center mb-6">
+              <Pressable
+                onPress={handlePickImage}
+                style={({ pressed }) => [
+                  {
+                    width: 100,
+                    height: 100,
+                    borderRadius: 50,
+                    backgroundColor: colors.surface,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    marginBottom: 8,
+                  },
+                  pressed && { opacity: 0.7 },
+                ]}
+              >
+                {tempUserAvatar ? (
+                  <Image
+                    source={{ uri: tempUserAvatar }}
+                    style={{
+                      width: 100,
+                      height: 100,
+                      borderRadius: 50,
+                    }}
+                  />
+                ) : (
+                  <Ionicons name="camera" size={40} color={colors.primary} />
+                )}
+              </Pressable>
+              <Text className="text-muted text-sm">点击更改头像</Text>
+            </View>
+
+            {/* Name Input */}
+            <View className="mb-6">
+              <Text className="text-foreground font-medium mb-2">名称</Text>
+              <TextInput
+                value={tempUserName}
+                onChangeText={setTempUserName}
+                placeholder="输入你的名称"
+                placeholderTextColor={colors.muted}
+                style={{
+                  backgroundColor: colors.surface,
+                  color: colors.foreground,
+                  borderRadius: 12,
+                  paddingHorizontal: 16,
+                  paddingVertical: 12,
+                  fontSize: 16,
+                }}
+              />
+            </View>
+
+            {/* Actions */}
+            <View className="flex-row gap-3">
+              <Pressable
+                onPress={() => setShowProfileModal(false)}
+                style={({ pressed }) => [
+                  styles.modalButton,
+                  { backgroundColor: colors.surface, flex: 1 },
+                  pressed && { opacity: 0.8 },
+                ]}
+              >
+                <Text className="text-foreground font-medium">取消</Text>
+              </Pressable>
+              <Pressable
+                onPress={handleSaveProfile}
+                style={({ pressed }) => [
+                  styles.modalButton,
+                  { backgroundColor: colors.primary, flex: 1 },
+                  pressed && { opacity: 0.8 },
+                ]}
+              >
+                <Text className="text-white font-semibold">保存</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScreenContainer>
   );
 }
@@ -380,5 +574,12 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
+  },
+  profileModalContent: {
+    width: "100%",
+    maxWidth: 360,
+    borderRadius: 20,
+    padding: 24,
+    maxHeight: "80%",
   },
 });

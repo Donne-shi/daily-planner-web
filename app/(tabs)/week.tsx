@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useRef } from "react";
 import {
   ScrollView,
   Text,
@@ -8,10 +8,14 @@ import {
   ActivityIndicator,
   StyleSheet,
   Modal,
+  Image as RNImage,
 } from "react-native";
 import * as Haptics from "expo-haptics";
 import * as Clipboard from "expo-clipboard";
 import { Platform } from "react-native";
+import * as FileSystem from "expo-file-system";
+import * as Sharing from "expo-sharing";
+import ViewShot from "react-native-view-shot";
 
 import { ScreenContainer } from "@/components/screen-container";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -120,9 +124,70 @@ export default function WeekScreen() {
     gratitude3: ["", "", ""],
     distractions: [""],
   });
+  const [showShareModal, setShowShareModal] = useState(false);
 
   const today = getToday();
   const currentWeekStart = getWeekStartDate();
+
+  // Generate share image
+  const generateShareImage = async () => {
+    if (Platform.OS === "web") {
+      const canvas = document.createElement("canvas");
+      canvas.width = 1080;
+      canvas.height = 1920;
+      const ctx = canvas.getContext("2d")!;
+
+      ctx.fillStyle = colors.background;
+      ctx.fillRect(0, 0, 1080, 1920);
+
+      ctx.fillStyle = colors.primary;
+      ctx.fillRect(0, 0, 1080, 300);
+
+      ctx.fillStyle = "#fff";
+      ctx.font = "bold 48px sans-serif";
+      ctx.fillText(state.settings.userName || "用户", 80, 140);
+
+      ctx.font = "32px sans-serif";
+      ctx.fillText("本周成果", 80, 190);
+
+      ctx.fillStyle = colors.foreground;
+      ctx.font = "bold 40px sans-serif";
+      let y = 400;
+
+      const weekSessions = getWeekSessions(displayedWeekStart);
+      const totalMinutes = weekSessions.reduce((sum, s) => sum + s.durationMinutes, 0);
+      const totalSessions = weekSessions.length;
+
+      ctx.fillText("📊 本周数据", 60, y);
+      y += 80;
+
+      ctx.font = "32px sans-serif";
+      ctx.fillText(`专注次数: ${totalSessions} 次`, 80, y);
+      y += 60;
+      ctx.fillText(`专注时间: ${totalMinutes} 分钟`, 80, y);
+      y += 60;
+      const avgEnergy = weekSessions.filter(s => s.energyScore).length > 0 
+        ? (weekSessions.filter(s => s.energyScore).reduce((sum, s) => sum + (s.energyScore || 0), 0) / weekSessions.filter(s => s.energyScore).length).toFixed(1)
+        : "-";
+      ctx.fillText(`平均精力: ${avgEnergy}`, 80, y);
+      y += 100;
+
+      ctx.font = "24px sans-serif";
+      ctx.fillStyle = colors.muted;
+      ctx.fillText("时间好管家 - 专注效率，成就更好的自己", 60, 1850);
+
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `weekly-summary-${displayedWeekStart}.png`;
+          a.click();
+          URL.revokeObjectURL(url);
+        }
+      });
+    }
+  };
   
   // Calculate displayed week based on offset
   const displayedWeekStart = useMemo(() => {
@@ -238,8 +303,8 @@ export default function WeekScreen() {
     return `📊 本周成果总结
 
 ✅ 完成任务: ${weekStats.taskCount} 项
-🍅 番茄次数: ${weekStats.pomodoroCount} 个
-⏱️ 专注时长: ${weekStats.focusMinutes} 分钟
+🍏 番茄次数: ${weekStats.pomodoroCount} 个
+⏱️ 专注时長: ${weekStats.focusMinutes} 分钟
 
 🏆 本周重要完成事项:
 ${top3Tasks.length > 0 ? top3Tasks.map((t, i) => `${i + 1}. ${t.title}`).join("\n") : "暂无"}
@@ -609,7 +674,13 @@ ${top3Tasks.length > 0 ? top3Tasks.map((t, i) => `${i + 1}. ${t.title}`).join("\
                     {/* Hourly Timeline */}
                     {sortedHours.length > 0 && (
                       <View className="mt-2 pt-3 border-t border-border">
-                        <Text className="text-sm font-medium text-foreground mb-3">🍅 番茄时间分布</Text>
+                        <View className="flex-row items-center mb-3">
+                          <RNImage
+                            source={require("@/assets/images/icon.png")}
+                            style={{ width: 16, height: 16, marginRight: 6, borderRadius: 3 }}
+                          />
+                          <Text className="text-sm font-medium text-foreground">番茄时间分布</Text>
+                        </View>
                         {sortedHours.map((hour) => (
                           <View key={hour} className="flex-row items-center mb-2">
                             <Text className="text-muted text-sm w-12">
@@ -734,6 +805,19 @@ ${top3Tasks.length > 0 ? top3Tasks.map((t, i) => `${i + 1}. ${t.title}`).join("\
                 ]}
               >
                 <Text className="text-white font-semibold">复制</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  generateShareImage();
+                  setShowSummary(false);
+                }}
+                style={({ pressed }) => [
+                  styles.modalButton,
+                  { backgroundColor: colors.primary, flex: 1 },
+                  pressed && { opacity: 0.8 },
+                ]}
+              >
+                <Text className="text-white font-semibold">分享</Text>
               </Pressable>
             </View>
           </View>
