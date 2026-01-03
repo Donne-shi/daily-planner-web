@@ -71,6 +71,7 @@ export default function StatsScreen() {
     let lowHour: { hour: string; value: number } | null = null;
     let avgEnergy: number | null = null;
     let dataPointCount = 0;
+    let bestTimeSlots: { time: string; avgEnergy: number; count: number }[] = [];
 
     if (timeRange === "today") {
       // Today view: show hourly energy curve
@@ -202,6 +203,31 @@ export default function StatsScreen() {
 
     const totalMinutes = sessions.reduce((sum, s) => sum + s.durationMinutes, 0);
 
+    // Calculate best time slots based on all historical data
+    if (timeRange === "week" || timeRange === "month") {
+      const hourlyStats: { [hour: number]: { energies: number[]; count: number } } = {};
+      
+      state.sessions.forEach((s) => {
+        if (s.isCompleted && s.energyScore && s.endAt) {
+          const hour = getHourFromTimestamp(s.endAt);
+          if (!hourlyStats[hour]) hourlyStats[hour] = { energies: [], count: 0 };
+          hourlyStats[hour].energies.push(s.energyScore);
+          hourlyStats[hour].count++;
+        }
+      });
+
+      const timeSlotData = Object.entries(hourlyStats)
+        .map(([hour, data]) => ({
+          time: `${hour}:00-${hour}:59`,
+          avgEnergy: Math.round((data.energies.reduce((a, b) => a + b, 0) / data.energies.length) * 10) / 10,
+          count: data.count,
+        }))
+        .sort((a, b) => b.avgEnergy - a.avgEnergy)
+        .slice(0, 3);
+      
+      bestTimeSlots = timeSlotData;
+    }
+
     // Calculate completed tasks for the time range
     let completedTasks = 0;
     if (timeRange === "today") {
@@ -233,6 +259,7 @@ export default function StatsScreen() {
       lowHour,
       avgEnergy,
       dataPointCount,
+      bestTimeSlots,
     };
   }, [state.sessions, timeRange, weekStartDate, today]);
 
@@ -553,6 +580,43 @@ export default function StatsScreen() {
             </View>
           )}
         </View>
+
+        {/* Best Time Slots Prediction */}
+        {stats.bestTimeSlots.length > 0 && (
+          <View className="mt-4 bg-primary/10 rounded-2xl p-4 mb-4">
+            <View className="flex-row items-center mb-3">
+              <FeatherIcon name="zap" size={20} color={colors.primary} style={{ marginRight: 8 }} />
+              <Text className="text-lg font-semibold text-foreground">
+                精力趋势预测
+              </Text>
+            </View>
+            <Text className="text-muted text-sm mb-3">
+              基于历史数据分析，您最佳工作时间段：
+            </Text>
+            {stats.bestTimeSlots.map((slot, index) => (
+              <View key={index} className="flex-row items-center justify-between bg-surface rounded-lg px-3 py-2 mb-2">
+                <View className="flex-1">
+                  <Text className="text-foreground font-medium">
+                    {index + 1}. {slot.time}
+                  </Text>
+                  <Text className="text-muted text-xs mt-1">
+                    平均精力 {slot.avgEnergy} 分 · {slot.count} 次记录
+                  </Text>
+                </View>
+                <View className="items-center">
+                  <View
+                    style={[
+                      { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+                      { backgroundColor: colors.primary },
+                    ]}
+                  >
+                    <Text className="text-white font-bold text-lg">{slot.avgEnergy}</Text>
+                  </View>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
 
         {/* Energy Legend */}
         <View className="mt-4 bg-surface rounded-xl p-4">
