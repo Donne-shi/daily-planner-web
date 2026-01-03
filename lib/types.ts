@@ -37,6 +37,8 @@ export interface WeeklyReflection {
   top3Achievements: string[];
   gratitude3: string[];
   distractions: string[];
+  nextWeekGrowth?: string; // 下周成长方向
+  improvementSpace?: string; // 提升空间
   createdAt: string;
 }
 

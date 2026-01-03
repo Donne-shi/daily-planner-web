@@ -201,9 +201,31 @@ export default function StatsScreen() {
 
     const totalMinutes = sessions.reduce((sum, s) => sum + s.durationMinutes, 0);
 
+    // Calculate completed tasks for the time range
+    let completedTasks = 0;
+    if (timeRange === "today") {
+      completedTasks = state.tasks.filter((t) => t.isCompleted && t.date === today).length;
+    } else if (timeRange === "week") {
+      const weekDays = Array.from({ length: 7 }, (_, i) => {
+        const d = new Date(weekStartDate);
+        d.setDate(d.getDate() + i);
+        return d.toISOString().split("T")[0];
+      });
+      completedTasks = state.tasks.filter((t) => t.isCompleted && weekDays.includes(t.date)).length;
+    } else {
+      // Month view: last 30 days
+      const monthDays = Array.from({ length: 30 }, (_, i) => {
+        const d = new Date();
+        d.setDate(d.getDate() - (29 - i));
+        return d.toISOString().split("T")[0];
+      });
+      completedTasks = state.tasks.filter((t) => t.isCompleted && monthDays.includes(t.date)).length;
+    }
+
     return {
       pomodoroCount: sessions.length,
       focusMinutes: totalMinutes,
+      completedTasks,
       labels,
       energyData,
       peakHour,
@@ -349,6 +371,13 @@ export default function StatsScreen() {
               {stats.focusMinutes}
             </Text>
             <Text className="text-muted text-sm mt-1">专注分钟</Text>
+          </View>
+          <View className="flex-1 bg-surface rounded-2xl p-4 items-center">
+            <Text className="text-4xl mb-2">✅</Text>
+            <Text className="text-3xl font-bold text-primary">
+              {stats.completedTasks}
+            </Text>
+            <Text className="text-muted text-sm mt-1">完成任务</Text>
           </View>
         </View>
 

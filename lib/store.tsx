@@ -320,7 +320,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     if (goal) {
       dispatch({
         type: 'UPDATE_YEAR_GOAL',
-        payload: { ...goal, isCompleted: !goal.isCompleted, progress: !goal.isCompleted ? 100 : goal.progress },
+        payload: { ...goal, isCompleted: !goal.isCompleted, progress: !goal.isCompleted ? 100 : 0 },
       });
     }
   }, [state.yearGoals]);

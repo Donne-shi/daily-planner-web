@@ -123,6 +123,8 @@ export default function WeekScreen() {
     top3Achievements: ["", "", ""],
     gratitude3: ["", "", ""],
     distractions: [""],
+    nextWeekGrowth: "",
+    improvementSpace: "",
   });
   const [showShareModal, setShowShareModal] = useState(false);
 
@@ -288,6 +290,8 @@ export default function WeekScreen() {
       top3Achievements: reflectionForm.top3Achievements.filter((s) => s.trim()),
       gratitude3: reflectionForm.gratitude3.filter((s) => s.trim()),
       distractions: reflectionForm.distractions.filter((s) => s.trim()),
+      nextWeekGrowth: reflectionForm.nextWeekGrowth.trim(),
+      improvementSpace: reflectionForm.improvementSpace.trim(),
     });
     setShowReflection(false);
     if (Platform.OS !== "web") {
@@ -806,19 +810,6 @@ ${top3Tasks.length > 0 ? top3Tasks.map((t, i) => `${i + 1}. ${t.title}`).join("\
               >
                 <Text className="text-white font-semibold">复制</Text>
               </Pressable>
-              <Pressable
-                onPress={() => {
-                  generateShareImage();
-                  setShowSummary(false);
-                }}
-                style={({ pressed }) => [
-                  styles.modalButton,
-                  { backgroundColor: colors.primary, flex: 1 },
-                  pressed && { opacity: 0.8 },
-                ]}
-              >
-                <Text className="text-white font-semibold">分享</Text>
-              </Pressable>
             </View>
           </View>
         </View>
@@ -892,6 +883,34 @@ ${top3Tasks.length > 0 ? top3Tasks.map((t, i) => `${i + 1}. ${t.title}`).join("\
                 value={reflectionForm.distractions[0]}
                 onChangeText={(text) => {
                   setReflectionForm({ ...reflectionForm, distractions: [text] });
+                }}
+                multiline
+              />
+
+              <Text className="text-base font-semibold text-foreground mb-2 mt-4">
+                🌱 下周成长方向
+              </Text>
+              <TextInput
+                className="bg-surface rounded-xl px-4 py-3 text-foreground mb-4"
+                placeholder="下周我想要成长的方向是？"
+                placeholderTextColor={colors.muted}
+                value={reflectionForm.nextWeekGrowth}
+                onChangeText={(text) => {
+                  setReflectionForm({ ...reflectionForm, nextWeekGrowth: text });
+                }}
+                multiline
+              />
+
+              <Text className="text-base font-semibold text-foreground mb-2 mt-4">
+                🚀 提升空间
+              </Text>
+              <TextInput
+                className="bg-surface rounded-xl px-4 py-3 text-foreground mb-4"
+                placeholder="下周有哪些方面可以提升？"
+                placeholderTextColor={colors.muted}
+                value={reflectionForm.improvementSpace}
+                onChangeText={(text) => {
+                  setReflectionForm({ ...reflectionForm, improvementSpace: text });
                 }}
                 multiline
               />

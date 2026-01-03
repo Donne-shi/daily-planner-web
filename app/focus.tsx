@@ -44,17 +44,21 @@ const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 type TimerStatus = "idle" | "running";
 
-// Play completion sound with multiple beeps
+// Play completion sound with multiple beeps (3 seconds total)
 const playCompletionSound = () => {
   if (Platform.OS === "web") {
     try {
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
       
-      // Play three beeps with increasing frequency
+      // Play beeps for 3 seconds total
+      const beepDuration = 0.4;
       const beeps = [
         { frequency: 800, delay: 0 },
-        { frequency: 1000, delay: 200 },
-        { frequency: 1200, delay: 400 },
+        { frequency: 1000, delay: 500 },
+        { frequency: 1200, delay: 1000 },
+        { frequency: 1000, delay: 1500 },
+        { frequency: 1200, delay: 2000 },
+        { frequency: 800, delay: 2500 },
       ];
       
       beeps.forEach(({ frequency, delay }) => {
@@ -68,10 +72,10 @@ const playCompletionSound = () => {
           oscillator.frequency.value = frequency;
           oscillator.type = "sine";
           gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + beepDuration);
           
           oscillator.start(audioContext.currentTime);
-          oscillator.stop(audioContext.currentTime + 0.3);
+          oscillator.stop(audioContext.currentTime + beepDuration);
         }, delay);
       });
     } catch (e) {
