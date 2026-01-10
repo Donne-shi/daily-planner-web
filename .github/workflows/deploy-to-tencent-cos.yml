@@ -14,16 +14,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9.12.0
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: 'pnpm'
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: 9.12.0
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -31,21 +31,59 @@ jobs:
       - name: Build web app
         run: pnpm run build:web
 
-      - name: Install Tencent COS CLI
-        run: npm install -g cos-cli
-
-      - name: Configure Tencent COS credentials
-        run: |
-          cos config set \
-            -a ${{ secrets.TENCENT_SECRET_ID }} \
-            -s ${{ secrets.TENCENT_SECRET_KEY }} \
-            -r ap-guangzhou \
-            -m json
+      - name: Install Tencent COS SDK
+        run: npm install -g cos-nodejs-sdk-v5
 
       - name: Upload to Tencent COS
         run: |
-          # 上传所有文件到 COS
-          cos sync ./dist cos://timemanage-1394588695/ --delete
+          cat > upload.js << 'EOF'
+          const COS = require('cos-nodejs-sdk-v5');
+          const fs = require('fs');
+          const path = require('path');
+          
+          const cos = new COS({
+            SecretId: process.env.TENCENT_SECRET_ID,
+            SecretKey: process.env.TENCENT_SECRET_KEY,
+          });
+          
+          const bucket = 'timemanage-1394588695';
+          const region = 'ap-guangzhou';
+          const distDir = './dist';
+          
+          function uploadDir(dir, prefix = '') {
+            const files = fs.readdirSync(dir);
+            
+            files.forEach(file => {
+              const filePath = path.join(dir, file);
+              const stat = fs.statSync(filePath);
+              const key = prefix ? `${prefix}/${file}` : file;
+              
+              if (stat.isDirectory()) {
+                uploadDir(filePath, key);
+              } else {
+                cos.putObject({
+                  Bucket: bucket,
+                  Region: region,
+                  Key: key,
+                  Body: fs.readFileSync(filePath),
+                }, (err, data) => {
+                  if (err) {
+                    console.error(`上传失败: ${key}`, err);
+                  } else {
+                    console.log(`上传成功: ${key}`);
+                  }
+                });
+              }
+            });
+          }
+          
+          uploadDir(distDir);
+          EOF
+          
+          node upload.js
+        env:
+          TENCENT_SECRET_ID: ${{ secrets.TENCENT_SECRET_ID }}
+          TENCENT_SECRET_KEY: ${{ secrets.TENCENT_SECRET_KEY }}
 
       - name: Deployment successful
         run: |
