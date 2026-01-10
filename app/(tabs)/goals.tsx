@@ -17,12 +17,14 @@ import { FeatherIcon } from "@/components/feather-icon";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useStore } from "@/lib/store";
 import { useColors } from "@/hooks/use-colors";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 import { YearGoal } from "@/lib/types";
 
-const CATEGORIES = ["工作", "学习", "健康", "财务", "家庭", "个人成长", "其他"];
+const CATEGORIES = ["信仰", "健康", "关系", "学习", "工作", "财务", "其他"];
 
 export default function GoalsScreen() {
   const colors = useColors();
+  const colorScheme = useColorScheme();
   const {
     state,
     updateSettings,
@@ -34,6 +36,7 @@ export default function GoalsScreen() {
 
   const [showAddGoal, setShowAddGoal] = useState(false);
   const [editingGoal, setEditingGoal] = useState<YearGoal | null>(null);
+  const [isGoalsExpanded, setIsGoalsExpanded] = useState(true);
   const [goalForm, setGoalForm] = useState({
     title: "",
     category: "",
@@ -45,6 +48,9 @@ export default function GoalsScreen() {
     () => state.yearGoals.sort((a, b) => (a.isCompleted ? 1 : 0) - (b.isCompleted ? 1 : 0)),
     [state.yearGoals]
   );
+
+  const shouldAutoCollapse = state.yearGoals.length > 3;
+  const displayedGoals = !isGoalsExpanded && shouldAutoCollapse ? yearGoals.slice(0, 3) : yearGoals;
 
   const handleSaveMission = (text: string) => {
     updateSettings({ mission: text });
@@ -138,8 +144,8 @@ export default function GoalsScreen() {
         {/* Mission */}
         <View className="mb-6">
           <View className="flex-row items-center mb-3">
-            <FeatherIcon name="target" size={20} color={colors.foreground} style={{ marginRight: 8 }} />
-            <Text className="text-lg font-semibold text-foreground">
+            <FeatherIcon name="target" size={20} color={colors.primary} style={{ marginRight: 8 }} />
+            <Text className="text-lg font-semibold" style={{ color: colors.primary }}>
               使命 (Mission)
             </Text>
           </View>
@@ -150,16 +156,15 @@ export default function GoalsScreen() {
             value={state.settings.mission || ""}
             onChangeText={handleSaveMission}
             multiline
-            numberOfLines={3}
-            style={{ minHeight: 80, textAlignVertical: "top" }}
+            style={{ minHeight: 120, textAlignVertical: "top" }}
           />
         </View>
 
         {/* Vision */}
         <View className="mb-6">
           <View className="flex-row items-center mb-3">
-            <FeatherIcon name="eye" size={20} color={colors.foreground} style={{ marginRight: 8 }} />
-            <Text className="text-lg font-semibold text-foreground">
+            <FeatherIcon name="eye" size={20} color={colors.primary} style={{ marginRight: 8 }} />
+            <Text className="text-lg font-semibold" style={{ color: colors.primary }}>
               愿景 (Vision)
             </Text>
           </View>
@@ -170,8 +175,7 @@ export default function GoalsScreen() {
             value={state.settings.vision || ""}
             onChangeText={handleSaveVision}
             multiline
-            numberOfLines={3}
-            style={{ minHeight: 80, textAlignVertical: "top" }}
+            style={{ minHeight: 120, textAlignVertical: "top" }}
           />
         </View>
 
@@ -179,8 +183,8 @@ export default function GoalsScreen() {
         <View className="mb-6">
           <View className="flex-row items-center justify-between mb-3">
             <View className="flex-row items-center">
-              <FeatherIcon name="trophy" size={20} color={colors.foreground} style={{ marginRight: 8 }} />
-              <Text className="text-lg font-semibold text-foreground">
+              <FeatherIcon name="trophy" size={20} color={colors.primary} style={{ marginRight: 8 }} />
+              <Text className="text-lg font-semibold" style={{ color: colors.primary }}>
                 年目标
               </Text>
             </View>
@@ -206,7 +210,7 @@ export default function GoalsScreen() {
               </Text>
             </View>
           ) : (
-            yearGoals.map((goal) => (
+            displayedGoals.map((goal) => (
               <View
                 key={goal.id}
                 className="bg-surface rounded-xl p-4 mb-3"
@@ -287,6 +291,22 @@ export default function GoalsScreen() {
               </View>
             ))
           )}
+          
+          {shouldAutoCollapse && (
+            <Pressable
+              onPress={() => setIsGoalsExpanded(!isGoalsExpanded)}
+              style={({ pressed }) => [{
+                paddingVertical: 12,
+                paddingHorizontal: 16,
+                alignItems: "center",
+                opacity: pressed ? 0.7 : 1,
+              }]}
+            >
+              <Text className="text-primary font-medium">
+                {isGoalsExpanded ? "收起" : `展开全部 (${yearGoals.length - 3} 个)`}
+              </Text>
+            </Pressable>
+          )}
         </View>
       </ScrollView>
 
@@ -365,11 +385,11 @@ export default function GoalsScreen() {
                 }
                 style={({ pressed }) => [
                   styles.progressButton,
-                  { backgroundColor: colors.surface },
+                  { backgroundColor: colorScheme === 'light' ? colors.primary : colors.surface },
                   pressed && { opacity: 0.7 },
                 ]}
               >
-                <Text className="text-foreground text-lg">-</Text>
+                <Text className={`text-lg ${colorScheme === 'light' ? 'text-white' : 'text-foreground'}`}>-</Text>
               </Pressable>
               <View className="flex-1 mx-3 h-3 bg-surface rounded-full overflow-hidden">
                 <View
@@ -389,11 +409,11 @@ export default function GoalsScreen() {
                 }
                 style={({ pressed }) => [
                   styles.progressButton,
-                  { backgroundColor: colors.surface },
+                  { backgroundColor: colorScheme === 'light' ? colors.primary : colors.surface },
                   pressed && { opacity: 0.7 },
                 ]}
               >
-                <Text className="text-foreground text-lg">+</Text>
+                <Text className={`text-lg ${colorScheme === 'light' ? 'text-white' : 'text-foreground'}`}>+</Text>
               </Pressable>
             </View>
 
@@ -413,11 +433,11 @@ export default function GoalsScreen() {
                 onPress={resetForm}
                 style={({ pressed }) => [
                   styles.modalButton,
-                  { backgroundColor: colors.surface },
+                  { backgroundColor: colorScheme === 'light' ? colors.primary : colors.surface },
                   pressed && { opacity: 0.8 },
                 ]}
               >
-                <Text className="text-foreground font-medium">取消</Text>
+                <Text className={`font-medium ${colorScheme === 'light' ? 'text-white' : 'text-foreground'}`}>取消</Text>
               </Pressable>
               <Pressable
                 onPress={handleAddGoal}

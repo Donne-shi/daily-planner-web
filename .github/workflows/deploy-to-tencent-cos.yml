@@ -1,0 +1,53 @@
+name: Deploy to Tencent COS
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9.12.0
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build web app
+        run: pnpm run build:web
+
+      - name: Install Tencent COS CLI
+        run: npm install -g cos-cli
+
+      - name: Configure Tencent COS credentials
+        run: |
+          cos config set \
+            -a ${{ secrets.TENCENT_SECRET_ID }} \
+            -s ${{ secrets.TENCENT_SECRET_KEY }} \
+            -r ap-guangzhou \
+            -m json
+
+      - name: Upload to Tencent COS
+        run: |
+          # 上传所有文件到 COS
+          cos sync ./dist cos://timemanage-1394588695/ --delete
+
+      - name: Deployment successful
+        run: |
+          echo "✓ 部署成功！"
+          echo "访问地址: https://timemanage-1394588695.cos.ap-guangzhou.myqcloud.com/index.html"

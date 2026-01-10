@@ -27,6 +27,7 @@ import { ScreenContainer } from "@/components/screen-container";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useStore, getToday } from "@/lib/store";
 import { useColors } from "@/hooks/use-colors";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 import { ENERGY_TAGS, EnergyTag } from "@/lib/types";
 import { Image } from "react-native";
 
@@ -88,6 +89,7 @@ export default function FocusScreen() {
   useKeepAwake();
   
   const colors = useColors();
+  const colorScheme = useColorScheme();
   const router = useRouter();
   const { state, addSession } = useStore();
   const scrollViewRef = useRef<ScrollView>(null);
@@ -184,9 +186,30 @@ export default function FocusScreen() {
       playCompletionSound();
     }
     
+    // Browser notification for web when app is in background
+    if (Platform.OS === "web" && typeof window !== "undefined" && "Notification" in window) {
+      if (Notification.permission === "granted") {
+        new Notification("番茄时钟完成", {
+          body: duration + "分钟的专注时间已完成！",
+          icon: "/assets/images/icon.png",
+          tag: "pomodoro-complete",
+        });
+      } else if (Notification.permission !== "denied") {
+        Notification.requestPermission().then((permission) => {
+          if (permission === "granted") {
+            new Notification("番茄时钟完成", {
+              body: duration + "分钟的专注时间已完成！",
+              icon: "/assets/images/icon.png",
+              tag: "pomodoro-complete",
+            });
+          }
+        });
+      }
+    }
+    
     // Show feedback modal
     setShowFeedback(true);
-  }, [state.settings.vibrationEnabled, state.settings.voiceEnabled]);
+  }, [state.settings.vibrationEnabled, state.settings.voiceEnabled, duration]);
 
   const handleStart = () => {
     if (Platform.OS !== "web") {
@@ -302,10 +325,10 @@ export default function FocusScreen() {
           hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
           style={({ pressed }) => [
             styles.backButton,
-            pressed && { opacity: 0.7, backgroundColor: colors.surface },
+            pressed && { opacity: 0.7, backgroundColor: colorScheme === 'light' ? colors.primary : colors.surface },
           ]}
         >
-          <Ionicons name="chevron-back" size={26} color={colors.foreground} />
+          <Ionicons name="chevron-back" size={26} color={colorScheme === 'light' ? '#fff' : colors.foreground} />
         </Pressable>
         <Text className="flex-1 text-center text-xl font-semibold text-foreground">
           番茄任务
@@ -502,7 +525,6 @@ export default function FocusScreen() {
           <View
             style={[styles.modalContent, { backgroundColor: colors.background }]}
           >
-            <Text className="text-2xl mb-2">🎉</Text>
             <Text className="text-xl font-bold text-foreground mb-4">
               番茄完成！
             </Text>
@@ -550,11 +572,11 @@ export default function FocusScreen() {
                 onPress={() => handleSaveSession(true)}
                 style={({ pressed }) => [
                   styles.modalButton,
-                  { backgroundColor: colors.surface },
+                  { backgroundColor: colorScheme === 'light' ? colors.primary : colors.surface },
                   pressed && { opacity: 0.8 },
                 ]}
               >
-                <Text className="text-foreground font-medium">跳过</Text>
+                <Text className={`font-medium ${colorScheme === 'light' ? 'text-white' : 'text-foreground'}`}>跳过</Text>
               </Pressable>
               <Pressable
                 onPress={() => handleSaveSession(false)}
@@ -581,6 +603,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: "transparent",
   },
   circleContainer: {
     width: CIRCLE_SIZE,

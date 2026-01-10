@@ -22,6 +22,7 @@ import { FeatherIcon } from "@/components/feather-icon";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useStore, getWeekStartDate, getToday } from "@/lib/store";
 import { useColors } from "@/hooks/use-colors";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 import { TodoTask, PomodoroSession, WeeklyReflection } from "@/lib/types";
 
 // Get week days
@@ -100,6 +101,7 @@ type ViewMode = "week" | "month";
 
 export default function WeekScreen() {
   const colors = useColors();
+  const colorScheme = useColorScheme();
   const {
     state,
     addWeeklyGoal,
@@ -161,7 +163,7 @@ export default function WeekScreen() {
       const totalMinutes = weekSessions.reduce((sum, s) => sum + s.durationMinutes, 0);
       const totalSessions = weekSessions.length;
 
-      ctx.fillText("📊 本周数据", 60, y);
+      ctx.fillText("本周数据", 60, y);
       y += 80;
 
       ctx.font = "32px sans-serif";
@@ -457,11 +459,11 @@ ${top3Tasks.length > 0 ? top3Tasks.map((t, i) => `${i + 1}. ${t.title}`).join("\
                 onPress={toggleViewMode}
                 style={({ pressed }) => [
                   styles.viewModeButton,
-                  { backgroundColor: colors.surface },
+                  { backgroundColor: colorScheme === 'light' ? colors.primary : colors.surface },
                   pressed && { opacity: 0.8 },
                 ]}
               >
-                <Text className="text-foreground text-sm font-medium">
+                <Text className={`text-sm font-medium ${colorScheme === 'light' ? 'text-white' : 'text-foreground'}`}>
                   {viewMode === "week" ? "月视图" : "周视图"}
                 </Text>
               </Pressable>
@@ -553,28 +555,28 @@ ${top3Tasks.length > 0 ? top3Tasks.map((t, i) => `${i + 1}. ${t.title}`).join("\
         <View className="mb-6">
           <View className="flex-row items-center justify-between mb-3">
             <Text className="text-lg font-semibold text-foreground">
-              📅 {viewMode === "week" ? "本周日历" : "月历"}
+              {viewMode === "week" ? "本周日历" : "月历"}
             </Text>
             <View className="flex-row items-center">
               <Pressable
                 onPress={viewMode === "week" ? handlePrevWeek : handlePrevMonth}
                 style={({ pressed }) => [
                   styles.navButton,
-                  { backgroundColor: colors.surface },
+                  { backgroundColor: colorScheme === 'light' ? colors.primary : colors.surface },
                   pressed && { opacity: 0.7 },
                 ]}
               >
-                <Ionicons name="chevron-back" size={20} color={colors.foreground} />
+                <Ionicons name="chevron-back" size={20} color={colorScheme === 'light' ? '#fff' : colors.foreground} />
               </Pressable>
               <Pressable
                 onPress={viewMode === "week" ? handleNextWeek : handleNextMonth}
                 style={({ pressed }) => [
                   styles.navButton,
-                  { backgroundColor: colors.surface, marginLeft: 8 },
+                  { backgroundColor: colorScheme === 'light' ? colors.primary : colors.surface, marginLeft: 8 },
                   pressed && { opacity: 0.7 },
                 ]}
               >
-                <Ionicons name="chevron-forward" size={20} color={colors.foreground} />
+                <Ionicons name="chevron-forward" size={20} color={colorScheme === 'light' ? '#fff' : colors.foreground} />
               </Pressable>
             </View>
           </View>
@@ -759,18 +761,19 @@ ${top3Tasks.length > 0 ? top3Tasks.map((t, i) => `${i + 1}. ${t.title}`).join("\
             <Pressable
               onPress={() => setShowReflection(true)}
               style={({ pressed }) => [
-                styles.actionButton,
-                { backgroundColor: colors.surface, marginTop: 12 },
+                styles.reflectionButton,
+                { backgroundColor: colorScheme === 'light' ? colors.primary : colors.surface, marginTop: 12 },
                 pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
               ]}
             >
-              <Ionicons name="create-outline" size={20} color={colors.foreground} />
-              <Text className="text-foreground font-semibold ml-2">本周反思</Text>
+              <View className="flex-row items-center flex-1">
+                <Ionicons name="create-outline" size={20} color={colorScheme === 'light' ? '#fff' : colors.foreground} />
+                <Text className={`font-semibold ml-2 ${colorScheme === 'light' ? 'text-white' : 'text-foreground'}`}>本周反思</Text>
+              </View>
               <Ionicons
                 name="chevron-forward"
                 size={20}
-                color={colors.muted}
-                style={{ marginLeft: "auto" }}
+                color={colorScheme === 'light' ? '#fff' : colors.muted}
               />
             </Pressable>
           </>
@@ -789,7 +792,7 @@ ${top3Tasks.length > 0 ? top3Tasks.map((t, i) => `${i + 1}. ${t.title}`).join("\
             style={[styles.modalContent, { backgroundColor: colors.background }]}
           >
             <Text className="text-xl font-bold text-foreground mb-4">
-              📊 本周成果
+              本周成果
             </Text>
             <View className="bg-surface rounded-xl p-4 mb-4">
               <Text className="text-foreground" style={{ lineHeight: 24 }}>
@@ -801,11 +804,11 @@ ${top3Tasks.length > 0 ? top3Tasks.map((t, i) => `${i + 1}. ${t.title}`).join("\
                 onPress={() => setShowSummary(false)}
                 style={({ pressed }) => [
                   styles.modalButton,
-                  { backgroundColor: colors.surface },
+                  { backgroundColor: colorScheme === 'light' ? colors.primary : colors.surface },
                   pressed && { opacity: 0.8 },
                 ]}
               >
-                <Text className="text-foreground font-medium">关闭</Text>
+                <Text className={`font-medium ${colorScheme === 'light' ? 'text-white' : 'text-foreground'}`}>关闭</Text>
               </Pressable>
               <Pressable
                 onPress={handleCopySummary}
@@ -836,13 +839,21 @@ ${top3Tasks.length > 0 ? top3Tasks.map((t, i) => `${i + 1}. ${t.title}`).join("\
               { backgroundColor: colors.background, maxHeight: "80%" },
             ]}
           >
-            <ScrollView showsVerticalScrollIndicator={false}>
-              <View className="flex-row items-center mb-4">
+            <View className="flex-row items-center justify-between mb-4">
+              <View className="flex-row items-center">
                 <FeatherIcon name="edit-3" size={20} color={colors.foreground} style={{ marginRight: 8 }} />
                 <Text className="text-xl font-bold text-foreground">
                   本周反思
                 </Text>
               </View>
+              <Pressable
+                onPress={() => setShowReflection(false)}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Ionicons name="close" size={24} color={colors.foreground} />
+              </Pressable>
+            </View>
+            <ScrollView showsVerticalScrollIndicator={false}>
 
               {/* Top 3 Achievements */}
               <View className="flex-row items-center mb-2">
@@ -915,7 +926,7 @@ ${top3Tasks.length > 0 ? top3Tasks.map((t, i) => `${i + 1}. ${t.title}`).join("\
               />
 
               <Text className="text-base font-semibold text-foreground mb-2 mt-4">
-                🚀 提升空间
+                提升空间
               </Text>
               <TextInput
                 className="bg-surface rounded-xl px-4 py-3 text-foreground mb-4"
@@ -934,11 +945,11 @@ ${top3Tasks.length > 0 ? top3Tasks.map((t, i) => `${i + 1}. ${t.title}`).join("\
                   onPress={() => setShowReflection(false)}
                   style={({ pressed }) => [
                     styles.modalButton,
-                    { backgroundColor: colors.surface },
+                    { backgroundColor: colorScheme === 'light' ? colors.primary : colors.surface },
                     pressed && { opacity: 0.8 },
                   ]}
                 >
-                  <Text className="text-foreground font-medium">取消</Text>
+                  <Text className={`font-medium ${colorScheme === 'light' ? 'text-white' : 'text-foreground'}`}>取消</Text>
                 </Pressable>
                 <Pressable
                   onPress={handleSaveReflection}
@@ -1000,6 +1011,16 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingVertical: 14,
     borderRadius: 12,
+    width: "100%",
+  },
+  reflectionButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 12,
+    width: "100%",
   },
   navButton: {
     width: 36,

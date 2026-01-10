@@ -394,14 +394,20 @@ export default function StatsScreen() {
             <Text className="text-muted text-sm mt-1">番茄次数</Text>
           </View>
           <View className="flex-1 bg-surface rounded-2xl p-4 items-center">
-            <FeatherIcon name="clock" size={32} color={colors.primary} style={{ marginBottom: 8 }} />
+            <Image
+              source={require("@/assets/images/icon.png")}
+              style={{ width: 48, height: 48, marginBottom: 8, borderRadius: 12 }}
+            />
             <Text className="text-3xl font-bold text-primary">
               {stats.focusMinutes}
             </Text>
             <Text className="text-muted text-sm mt-1">专注分钟</Text>
           </View>
           <View className="flex-1 bg-surface rounded-2xl p-4 items-center">
-            <FeatherIcon name="check" size={32} color={colors.primary} style={{ marginBottom: 8 }} />
+            <Image
+              source={require("@/assets/images/icon.png")}
+              style={{ width: 48, height: 48, marginBottom: 8, borderRadius: 12 }}
+            />
             <Text className="text-3xl font-bold text-primary">
               {stats.completedTasks}
             </Text>
@@ -414,21 +420,21 @@ export default function StatsScreen() {
           <View className="flex-row gap-3 mb-4">
             {stats.peakHour && (
               <View className="flex-1 bg-success/10 rounded-xl p-3">
-                <Text className="text-success text-xs font-medium">🔥 精力峰值</Text>
+                <Text className="text-success text-xs font-medium">精力峰值</Text>
                 <Text className="text-foreground font-bold mt-1">{stats.peakHour.hour}</Text>
                 <Text className="text-muted text-xs">{stats.peakHour.value} 分</Text>
               </View>
             )}
             {stats.lowHour && (
               <View className="flex-1 bg-warning/10 rounded-xl p-3">
-                <Text className="text-warning text-xs font-medium">😴 精力低谷</Text>
+                <Text className="text-warning text-xs font-medium">精力低谷</Text>
                 <Text className="text-foreground font-bold mt-1">{stats.lowHour.hour}</Text>
                 <Text className="text-muted text-xs">{stats.lowHour.value} 分</Text>
               </View>
             )}
             {stats.avgEnergy && (
               <View className="flex-1 bg-primary/10 rounded-xl p-3">
-                <Text className="text-primary text-xs font-medium">📊 平均精力</Text>
+                <Text className="text-primary text-xs font-medium">平均精力</Text>
                 <Text className="text-foreground font-bold mt-1">{stats.avgEnergy} 分</Text>
                 <Text className="text-muted text-xs">基于 {stats.dataPointCount} 个数据</Text>
               </View>

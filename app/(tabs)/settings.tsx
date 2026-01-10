@@ -169,7 +169,7 @@ export default function SettingsScreen() {
             }}
             style={({ pressed }) => [
               {
-                backgroundColor: colors.surface,
+                backgroundColor: colorScheme === 'light' ? colors.primary : colors.surface,
                 borderRadius: 16,
                 padding: 16,
               },
@@ -329,7 +329,7 @@ export default function SettingsScreen() {
         {/* Appearance Settings */}
         <View className="mb-6">
           <Text className="text-lg font-semibold text-foreground mb-3">
-            🎨 外观
+            外观
           </Text>
           <View className="bg-surface rounded-2xl overflow-hidden">
             <View className="flex-row items-center justify-between px-4 py-4">
@@ -446,11 +446,11 @@ export default function SettingsScreen() {
                 onPress={() => setShowClearConfirm(false)}
                 style={({ pressed }) => [
                   styles.modalButton,
-                  { backgroundColor: colors.surface, flex: 1 },
+                  { backgroundColor: colorScheme === 'light' ? colors.primary : colors.surface, flex: 1 },
                   pressed && { opacity: 0.8 },
                 ]}
               >
-                <Text className="text-foreground font-medium">取消</Text>
+                <Text className={`font-medium ${colorScheme === 'light' ? 'text-white' : 'text-foreground'}`}>取消</Text>
               </Pressable>
               <Pressable
                 onPress={confirmClearData}
@@ -497,7 +497,7 @@ export default function SettingsScreen() {
                     width: 100,
                     height: 100,
                     borderRadius: 50,
-                    backgroundColor: colors.surface,
+                    backgroundColor: colorScheme === 'light' ? colors.primary : colors.surface,
                     alignItems: "center",
                     justifyContent: "center",
                     marginBottom: 8,
@@ -530,7 +530,7 @@ export default function SettingsScreen() {
                 placeholder="输入你的名称"
                 placeholderTextColor={colors.muted}
                 style={{
-                  backgroundColor: colors.surface,
+                  backgroundColor: colorScheme === 'light' ? '#f5f5f5' : colors.surface,
                   color: colors.foreground,
                   borderRadius: 12,
                   paddingHorizontal: 16,
@@ -546,11 +546,11 @@ export default function SettingsScreen() {
                 onPress={() => setShowProfileModal(false)}
                 style={({ pressed }) => [
                   styles.modalButton,
-                  { backgroundColor: colors.surface, flex: 1 },
+                  { backgroundColor: colorScheme === 'light' ? colors.primary : colors.surface, flex: 1 },
                   pressed && { opacity: 0.8 },
                 ]}
               >
-                <Text className="text-foreground font-medium">取消</Text>
+                <Text className={`font-medium ${colorScheme === 'light' ? 'text-white' : 'text-foreground'}`}>取消</Text>
               </Pressable>
               <Pressable
                 onPress={handleSaveProfile}
@@ -679,15 +679,15 @@ export default function SettingsScreen() {
               </Pressable>
             </ScrollView>
             
-            <Pressable
+              <Pressable
               onPress={() => setShowAboutDeveloper(false)}
               style={({ pressed }) => [
                 styles.modalButton,
-                { backgroundColor: colors.surface },
+                { backgroundColor: colorScheme === 'light' ? colors.primary : colors.surface },
                 pressed && { opacity: 0.8 },
               ]}
             >
-              <Text className="text-foreground font-semibold">关闭</Text>
+              <Text className={`font-semibold ${colorScheme === 'light' ? 'text-white' : 'text-foreground'}`}>关闭</Text>
             </Pressable>
           </View>
         </View>

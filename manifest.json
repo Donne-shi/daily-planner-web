@@ -1,0 +1,69 @@
+{
+  "name": "时间好管家",
+  "short_name": "时间管家",
+  "description": "专业的番茄工作法计时工具，帮助您管理时间、提升专注力",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#ffffff",
+  "theme_color": "#FF6B6B",
+  "icons": [
+    {
+      "src": "/assets/images/icon.png",
+      "sizes": "2048x2048",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/images/icon.png",
+      "sizes": "2048x2048",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/images/favicon.png",
+      "sizes": "2048x2048",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/assets/images/splash-icon.png",
+      "sizes": "2048x2048",
+      "type": "image/png",
+      "form_factor": "narrow"
+    }
+  ],
+  "categories": ["productivity"],
+  "shortcuts": [
+    {
+      "name": "开始番茄",
+      "short_name": "番茄",
+      "description": "快速开始一个番茄计时",
+      "url": "/focus",
+      "icons": [
+        {
+          "src": "/assets/images/icon.png",
+          "sizes": "2048x2048",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "查看统计",
+      "short_name": "统计",
+      "description": "查看您的精力曲线和统计数据",
+      "url": "/stats",
+      "icons": [
+        {
+          "src": "/assets/images/icon.png",
+          "sizes": "2048x2048",
+          "type": "image/png"
+        }
+      ]
+    }
+  ],
+  "prefer_related_applications": false
+}
