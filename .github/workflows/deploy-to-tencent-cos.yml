@@ -14,73 +14,23 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v2
+      - name: Setup Python
+        uses: actions/setup-python@v4
         with:
-          version: 9.12.0
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'pnpm'
+          python-version: '3.11'
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: |
+          pip install -q cos-python-sdk-v5
 
       - name: Build web app
-        run: pnpm run build:web
-
-      - name: Install Tencent COS SDK
-        run: npm install -g cos-nodejs-sdk-v5
+        run: |
+          npm install -g pnpm
+          pnpm install --frozen-lockfile
+          pnpm run build:web
 
       - name: Upload to Tencent COS
-        run: |
-          cat > upload.js << 'EOF'
-          const COS = require('cos-nodejs-sdk-v5');
-          const fs = require('fs');
-          const path = require('path');
-          
-          const cos = new COS({
-            SecretId: process.env.TENCENT_SECRET_ID,
-            SecretKey: process.env.TENCENT_SECRET_KEY,
-          });
-          
-          const bucket = 'timemanage-1394588695';
-          const region = 'ap-guangzhou';
-          const distDir = './dist';
-          
-          function uploadDir(dir, prefix = '') {
-            const files = fs.readdirSync(dir);
-            
-            files.forEach(file => {
-              const filePath = path.join(dir, file);
-              const stat = fs.statSync(filePath);
-              const key = prefix ? `${prefix}/${file}` : file;
-              
-              if (stat.isDirectory()) {
-                uploadDir(filePath, key);
-              } else {
-                cos.putObject({
-                  Bucket: bucket,
-                  Region: region,
-                  Key: key,
-                  Body: fs.readFileSync(filePath),
-                }, (err, data) => {
-                  if (err) {
-                    console.error(`上传失败: ${key}`, err);
-                  } else {
-                    console.log(`上传成功: ${key}`);
-                  }
-                });
-              }
-            });
-          }
-          
-          uploadDir(distDir);
-          EOF
-          
-          node upload.js
+        run: python3 upload-to-cos.py
         env:
           TENCENT_SECRET_ID: ${{ secrets.TENCENT_SECRET_ID }}
           TENCENT_SECRET_KEY: ${{ secrets.TENCENT_SECRET_KEY }}
