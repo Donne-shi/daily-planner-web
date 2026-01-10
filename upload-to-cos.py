@@ -6,7 +6,7 @@ from pathlib import Path
 # 安装腾讯云 SDK
 os.system('pip install -q cos-python-sdk-v5')
 
-from cos_client import CosConfig, CosS3Client
+from cos.cos_client import CosConfig, CosS3Client
 
 def upload_dir_to_cos(local_dir, bucket, region, secret_id, secret_key):
     """递归上传目录到腾讯云 COS"""
